@@ -37,10 +37,8 @@ class TestHintedHandoff(Tester):
         - bring up 2 node cluster with rf = 2
         - take down node 2
         - write data to node 1, data should include updates and deletes (so to test mutations on same key)
-        - check that flat file is created
         - bring up node 2
         - force/allow hint delivery
-        - check that flat file is deleted
         - take down node 1 and verify data using cl=one
         """
         cluster = self.cluster
@@ -114,9 +112,11 @@ class TestHintedHandoff(Tester):
         """
 
         cluster = self.cluster
-        cluster.set_install_dir(version="2.2")
-        cluster.populate(3).start()
+        cluster.populate(3)
         [node1, node2, node3] = cluster.nodelist()
+
+        remove_perf_disable_shared_mem(node1)
+        cluster.start(wait_for_binary_proto=True)
 
         #create ks and table with rf 3
         cursor = self.patient_cql_connection(node1)
@@ -184,14 +184,17 @@ class TestHintedHandoff(Tester):
         - bring up 3 node cluster with rf = 3
         - sethintedhandoffthrottlekb to low kb
         - take down node, write data to others
-        - bring up node, force hint delivery
+        - bring up node
         - check statushandoff is reporting accurate stats
         - try pausing handoff, check status again to ensure, resume handoff
         - verify data
         """
         cluster = self.cluster
-        cluster.populate(3).start()
+        cluster.populate(3)
         [node1, node2, node3] = cluster.nodelist()
+
+        remove_perf_disable_shared_mem(node1)
+        cluster.start(wait_for_binary_proto=True)
 
         #create ks and table with rf 3
         cursor = self.patient_cql_connection(node1)
@@ -227,5 +230,5 @@ class TestHintedHandoff(Tester):
         output = node1.nodetool("statushandoff", capture_output=True)
         self.assertTrue("running" in output)
 
-        handedoff, pending_nodes = self.check_delivery(node1)
-        self.assertTrue(handedoff, msg=pending_nodes)
+        handedoff = self.check_delivery(node1)
+        self.assertTrue(handedoff)
