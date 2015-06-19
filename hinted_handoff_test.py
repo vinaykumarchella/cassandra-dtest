@@ -1,8 +1,8 @@
-from dtest import Tester, debug, DISABLE_VNODES
-from ccmlib.node import Node, NodeError, TimeoutError
-from cassandra import ConsistencyLevel, Unavailable, ReadTimeout
+from dtest import Tester, debug
+from ccmlib.node import Node
+from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
-from tools import since, InterruptBootstrap
+from tools import since
 from time import time, sleep
 from assertions import assert_none, assert_invalid
 from jmxutils import make_mbean, JolokiaAgent, remove_perf_disable_shared_mem
@@ -11,8 +11,8 @@ from jmxutils import make_mbean, JolokiaAgent, remove_perf_disable_shared_mem
 class TestHintedHandoff(Tester):
 
     def check_delivery(self, node):
-        node2_mbean = make_mbean('metrics', type='HintedHandoffManager', name='Hints_created-127.0.0.2')
-        node3_mbean = make_mbean('metrics', type='HintedHandoffManager', name='Hints_created-127.0.0.3')
+        node2_mbean = make_mbean('metrics', type='HintedHandOffManager', name='Hints_created-127.0.0.2')
+        node3_mbean = make_mbean('metrics', type='HintedHandOffManager', name='Hints_created-127.0.0.3')
         handedoff = False
         timeout = time() + 90.00
         while not handedoff and time() < timeout:
@@ -20,12 +20,12 @@ class TestHintedHandoff(Tester):
                 try:
                     node2 = jmx.read_attribute(node2_mbean, 'Count')
                     node3 = jmx.read_attribute(node3_mbean, 'Count')
-                    if node2 == "10200" and node3 == "10200":
+                    if 10200 <= node2 <= 10210 and 10200 <= node3 <= 10210:
                         handedoff = True
                     else:
                         debug(node3)
                         debug(node2)
-                        self.fail()
+                        return handedoff
                 except Exception,e:
                     debug(str(e))
         return handedoff
@@ -43,7 +43,7 @@ class TestHintedHandoff(Tester):
         """
         cluster = self.cluster
         cluster.populate(3)
-        [node1, node2, node3] = cluster.nodelist()
+        node1, node2, node3 = cluster.nodelist()
 
         remove_perf_disable_shared_mem(node1)
         cluster.start(wait_for_binary_proto=True)
@@ -113,7 +113,7 @@ class TestHintedHandoff(Tester):
 
         cluster = self.cluster
         cluster.populate(3)
-        [node1, node2, node3] = cluster.nodelist()
+        node1, node2, node3 = cluster.nodelist()
 
         remove_perf_disable_shared_mem(node1)
         cluster.start(wait_for_binary_proto=True)
@@ -191,7 +191,7 @@ class TestHintedHandoff(Tester):
         """
         cluster = self.cluster
         cluster.populate(3)
-        [node1, node2, node3] = cluster.nodelist()
+        node1, node2, node3 = cluster.nodelist()
 
         remove_perf_disable_shared_mem(node1)
         cluster.start(wait_for_binary_proto=True)
