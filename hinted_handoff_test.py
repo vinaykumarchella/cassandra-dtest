@@ -7,39 +7,52 @@ from time import time, sleep
 from assertions import assert_none, assert_invalid
 from jmxutils import make_mbean, JolokiaAgent, remove_perf_disable_shared_mem
 
-
+@since('3.0')
 class TestHintedHandoff(Tester):
 
-    def check_delivery(self, node):
-        node2_mbean = make_mbean('metrics', type='HintedHandOffManager', name='Hints_created-127.0.0.2')
-        node3_mbean = make_mbean('metrics', type='HintedHandOffManager', name='Hints_created-127.0.0.3')
-        handedoff = False
+    def check_delivery(self, node, destination_nodes, numhints, wait_for_delivery=False):
+        destinations = []
+        for dest in destination_nodes:
+            name = 'Hints_created-' + dest
+            destinations.append(make_mbean('metrics', type='HintedHandOffManager', name=dest))
+        hints_created = False
+        hints_delivered = False
         timeout = time() + 90.00
         while not handedoff and time() < timeout:
             with JolokiaAgent(node) as jmx:
                 try:
-                    node2 = jmx.read_attribute(node2_mbean, 'Count')
-                    node3 = jmx.read_attribute(node3_mbean, 'Count')
-                    if 10200 <= node2 <= 10210 and 10200 <= node3 <= 10210:
-                        handedoff = True
+                    results = []
+                    for mbean in destinations:
+                        results.append(jmx.read_attribute(mbean, 'Count'))
+                    #hints can sometimes be accumulated from system tables too, allow a little bit of skew
+                    if all([numhints <= node_hints <= (numhints + 10) for node_hints in results]):
+                        hints_created = True
+                        if wait_for_delivery:
+                            waiting = True
+                            while waiting:
+                                res = []
+                                for mbean in destinations:
+                                    res.append(jmx.read_attribute(mbean, 'Count'))
+                                if all([hint_count==0 for hint_count in res]):
+                                    waiting = False
+                                    hints_delivered = True
                     else:
                         debug(node3)
                         debug(node2)
-                        return handedoff
+                        return hints_created, hints_delivered
                 except Exception,e:
                     debug(str(e))
-        return handedoff
+        return hints_created, hints_delivered
 
-    @since('3.0')
     def simple_functionality_test(self):
         """
-        Simple Test - check hints are delivered, hint file created/removed
-        - bring up 2 node cluster with rf = 2
-        - take down node 2
+        Simple Test - check hints are delivered
+        - bring up 3 node cluster with rf = 3
+        - take down nodes 2, 3
         - write data to node 1, data should include updates and deletes (so to test mutations on same key)
-        - bring up node 2
-        - force/allow hint delivery
-        - take down node 1 and verify data using cl=one
+        - bring up nodes 2, 3
+        - allow hint delivery
+        - take down node 1 and verify data using cl=one for each node
         """
         cluster = self.cluster
         cluster.populate(3)
@@ -74,11 +87,11 @@ class TestHintedHandoff(Tester):
         node2.start()
         node3.start()
 
-        handedoff = self.check_delivery(node1)
+        hints, delivered = self.check_delivery(node1, [str(node2.address()), str(node3.address())], 10200, True)
+        self.assertTrue(hints)
+        self.assertTrue(delivered)
 
-        self.assertTrue(handedoff)
-
-        node1.stop(gently=False)
+        node1.stop(gently = False)
 
         for node in [node2,node3]:
             othernode = [x for x in [node2, node3] if not node == x][0]
@@ -97,7 +110,6 @@ class TestHintedHandoff(Tester):
                 assert_none(cursor, query)
             othernode.start()
 
-    @since('3.0')
     def upgrade_versions_test(self):
         """
         tests upgrading node with existing hints
@@ -154,9 +166,9 @@ class TestHintedHandoff(Tester):
         node2.start()
         node3.start()
 
-        handedoff = self.check_delivery(node1)
-
-        self.assertTrue(handedoff)
+        hints, delivered = self.check_delivery(node1, [str(node2.address()), str(node3.address())], 10200, True)
+        self.assertTrue(hints)
+        self.assertTrue(delivered)
 
         node1.stop(gently=False)
 
@@ -177,7 +189,6 @@ class TestHintedHandoff(Tester):
                 assert_none(cursor, query)
             othernode.start(wait=True)
 
-    @since('3.0')
     def nodetool_commands_test(self):
         """
         Check nodetool pausehandoff, resumehandoff, sethintedhandoffthrottlekb, statushandoff
@@ -230,5 +241,73 @@ class TestHintedHandoff(Tester):
         output = node1.nodetool("statushandoff", capture_output=True)
         self.assertTrue("running" in output)
 
-        handedoff = self.check_delivery(node1)
-        self.assertTrue(handedoff)
+        hints, delivered = self.check_delivery(node1, [str(node2.address()), str(node3.address())], 10200, True)
+        self.assertTrue(hints)
+        self.assertTrue(delivered)
+
+
+    def interrupted_delivery_test(self):
+        """
+        Check hints are delivered after receiving node is restarted during delivery
+        - bring up 3 node cluster with rf = 3
+        - take down node 2
+        - write data to node 1, data should include updates and deletes (so to test mutations on same key)
+        - bring up node 2
+        - force/allow hint delivery
+        - take down node 1 and verify data using cl=one
+        """
+        cluster = self.cluster
+        cluster.populate(2)
+        node1, node2 = cluster.nodelist()
+
+        remove_perf_disable_shared_mem(node1)
+        cluster.start(wait_for_binary_proto=True)
+
+        #create ks and table with rf 3
+        cursor = self.patient_cql_connection(node1)
+        ksq = "CREATE KEYSPACE hhtest WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':3}"
+        cfq = "CREATE TABLE hhtest.hhtab(key int primary key, val int);"
+        cursor.execute(ksq)
+        cursor.execute(cfq)
+
+        node2.stop(wait_other_notice=True, gently=False)
+
+        numhints=10000
+        for x in range(0, numhints):
+            insq = "INSERT INTO hhtest.hhtab(key,val) VALUES ({key}, {key})".format(key=str(x))
+            cursor.execute(insq)
+
+        for x in range(0, 100):
+            delq = "DELETE FROM hhtest.hhtab WHERE key = {key}".format(key=str(x))
+            cursor.execute(delq)
+
+        for x in range(100, 200):
+            updateq = "INSERT INTO hhtest.hhtab(key,val) VALUES ({key}, 100000)".format(key=str(x))
+            cursor.execute(updateq)
+
+        node2.start()
+
+        hints, delivered = self.check_delivery(node1, [str(node2.address())], 10200)
+        self.assertTrue(hints)
+        
+        node2.stop(gently=False)
+
+        node2.start(wait=False)
+
+        hints, delivered = self.check_delivery(node1, [str(node2.address())], 10200)
+        self.assertTrue(delivered)
+
+        node1.stop(gently=False)
+
+        cursor = self.patient_cql_connection(node)
+        for x in range(200, numhints):
+            query = "SELECT val from hhtest.hhtab WHERE key={key};".format(key=str(x))
+            results = cursor.execute(query)
+            self.assertEqual(results[0][0], x)
+        for x in range(100, 200):
+            query = "SELECT val from hhtest.hhtab WHERE key={key};".format(key=str(x))
+            results = cursor.execute(query)
+            self.assertEqual(results[0][0], 100000)
+        for x in range(0, 100):
+            query = "SELECT val from hhtest.hhtab WHERE key={key};".format(key=str(x))
+            assert_none(cursor, query)
