@@ -21,7 +21,7 @@ from upgrade_base import (UPGRADE_TEST_RUN, head_2dot1, head_2dot2, head_3dot0,
                           head_3dot1, head_3dot2, head_3dot3, head_trunk,
                           latest_2dot0, latest_2dot1, latest_2dot2,
                           latest_3dot0, latest_3dot1, latest_3dot2,
-                          latest_3dot3, switch_jdks)
+                          latest_3dot3, release_tag, switch_jdks)
 
 
 def data_writer(tester, to_verify_queue, verification_done_queue, rewrite_probability=0):
