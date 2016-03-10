@@ -1,9 +1,36 @@
+import itertools
+import time
 from collections import defaultdict
 from uuid import uuid4
 
-from dtest import Tester, debug
 from nose.tools import assert_equal, assert_in
+
+from cassandra import ConsistencyLevel as CL
+from dtest import Tester, debug
 from tools import since
+from upgrade_tests.upgrade_base import (UPGRADE_TEST_RUN, VALID_UPGRADE_PAIRS,
+                                        UpgradeTester)
+
+
+def templated_test(steps=None, repeat=1):
+    if "this" not in steps:
+        raise RuntimeError("at least one arg to templated_test must be 'this'")
+
+    if steps is None:
+        raise RuntimeError("templated_test called without any steps")
+
+    def outer(func_to_decorate):
+        def inner(method_self):
+            for i in range(repeat):
+                for func in steps:
+                    if func == "this":
+                        func_to_decorate(method_self)
+                    else:
+                        func(method_self)
+        inner.__name__ = func_to_decorate.__name__
+        return inner
+
+    return outer
 
 
 def establish_durable_writes_keyspace(version, session, table_name_prefix=""):
@@ -493,22 +520,57 @@ def _cql_name_builder(prefix, table_name):
     return "gen_{}".format(consistent_hasher[prefix + table_name])  # 'gen' as in 'generated'
 
 
-class TestSchemaMetadata(Tester):
+class TestSchemaMetadata(UpgradeTester):
 
-    def setUp(self):
-        Tester.setUp(self)
+    def prepare(self, ordered=False, create_keyspace=True, use_cache=False,
+                nodes=None, rf=None, protocol_version=None, cl=None, **kwargs):
+        nodes = self.NODES if nodes is None else nodes
+        rf = self.RF if rf is None else rf
+
+        cl = self.CL if cl is None else cl
+        self.CL = cl  # store for later use in do_upgrade
+
+        assert nodes >= 2, "backwards compatibility tests require at least two nodes"
+        assert not self._preserve_cluster, "preserve_cluster cannot be True for upgrade tests"
+
+        self.protocol_version = protocol_version
+
         cluster = self.cluster
         cluster.schema_event_refresh_window = 0
+
+        if (ordered):
+            cluster.set_partitioner("org.apache.cassandra.dht.ByteOrderedPartitioner")
+
+        if (use_cache):
+            cluster.set_configuration_options(values={'row_cache_size_in_mb': 100})
 
         if cluster.version() >= '3.0':
             cluster.set_configuration_options({'enable_user_defined_functions': 'true',
                                                'enable_scripted_user_defined_functions': 'true'})
         elif cluster.version() >= '2.2':
             cluster.set_configuration_options({'enable_user_defined_functions': 'true'})
-        cluster.populate(1).start()
 
-        self.session = self.patient_cql_connection(cluster.nodelist()[0])
-        self.create_ks(self.session, 'ks', 1)
+        start_rpc = kwargs.pop('start_rpc', False)
+        if start_rpc:
+            cluster.set_configuration_options(values={'start_rpc': True})
+
+        cluster.set_configuration_options(values={'internode_compression': 'none'})
+
+        cluster.populate(nodes)
+        node1 = cluster.nodelist()[0]
+        cluster.set_install_dir(version=self.UPGRADE_PATH.starting_version)
+        cluster.start(wait_for_binary_proto=True)
+
+        node1 = cluster.nodelist()[0]
+        time.sleep(0.2)
+        self.session = self.patient_cql_connection(node1, protocol_version=protocol_version)
+        if create_keyspace:
+            self.create_ks(self.session, 'ks', rf)
+
+        if cl:
+            self.session.default_consistency_level = cl
+
+        return self.session
 
     def _keyspace_meta(self, keyspace_name="ks"):
         self.session.cluster.refresh_schema_metadata()
@@ -670,7 +732,17 @@ class TestSchemaMetadata(Tester):
         establish_indexes_table(self.cluster.version(), self.session)
         verify_indexes_table(self.cluster.version(), self.cluster.version(), 'ks', self.session)
 
+    def _upgrade_and_check_nodes(self):
+        print "in here!"
+        if UPGRADE_TEST_RUN:
+            for is_upgraded, cursor in self.do_upgrade(self.cursor):
+                print "about to verify"
+                verify_durable_writes_keyspace(self.cluster.version(), self.cluster.version(), 'ks', self.session)
+
+    @templated_test(steps=["this", _upgrade_and_check_nodes])
     def durable_writes_test(self):
+        print "in the test!"
+        self.cursor = self.prepare()
         establish_durable_writes_keyspace(self.cluster.version(), self.session)
         verify_durable_writes_keyspace(self.cluster.version(), self.cluster.version(), 'ks', self.session)
 
@@ -695,3 +767,23 @@ class TestSchemaMetadata(Tester):
         establish_uda(self.cluster.version(), self.session)
         self.session.cluster.refresh_schema_metadata()
         verify_uda(self.cluster.version(), self.cluster.version(), 'ks', self.session)
+
+
+topology_specs = [
+    {'NODES': 3,
+     'RF': 3,
+     'CL': CL.ALL},
+    {'NODES': 2,
+     'RF': 1},
+]
+
+specs = [dict(s, UPGRADE_PATH=p, __test__=UPGRADE_TEST_RUN)
+         for s, p in itertools.product(topology_specs, VALID_UPGRADE_PAIRS)]
+
+for spec in specs:
+    suffix = 'Nodes{num_nodes}RF{rf}_{pathname}'.format(num_nodes=spec['NODES'],
+                                                        rf=spec['RF'],
+                                                        pathname=spec['UPGRADE_PATH'].name)
+    gen_class_name = TestSchemaMetadata.__name__ + suffix
+    assert gen_class_name not in globals(), gen_class_name
+    globals()[gen_class_name] = type(gen_class_name, (TestSchemaMetadata,), spec)

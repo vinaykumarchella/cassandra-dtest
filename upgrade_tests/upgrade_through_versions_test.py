@@ -10,11 +10,11 @@ from multiprocessing import Process, Queue
 from Queue import Empty, Full
 
 import psutil
-from cassandra import ConsistencyLevel, WriteTimeout
-from cassandra.query import SimpleStatement
 from six import print_
 
 import schema_metadata_test
+from cassandra import ConsistencyLevel, WriteTimeout
+from cassandra.query import SimpleStatement
 from dtest import Tester, debug
 from tools import generate_ssl_stores, known_failure, new_node
 from upgrade_base import (UPGRADE_TEST_RUN, head_2dot1, head_2dot2, head_3dot0,
@@ -447,8 +447,11 @@ class UpgradeTester(Tester):
             node.watch_log_for("DRAINED")
             node.stop(wait_other_notice=False)
 
+        print tag, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<,tag"
         for node in nodes:
+            print node.version(), "<<<<<<<<<<<<<<<before"
             node.set_install_dir(version=tag)
+            print node.version(), "<<<<<<<<<<<<<<<<<<after"
             debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
 
         # hacky? yes. We could probably extend ccm to allow this publicly.
