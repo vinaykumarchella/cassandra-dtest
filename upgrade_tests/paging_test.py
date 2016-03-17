@@ -1,4 +1,5 @@
 import itertools
+import random
 import time
 import uuid
 from unittest import SkipTest
@@ -6,7 +7,6 @@ from unittest import SkipTest
 from cassandra import ConsistencyLevel as CL
 from cassandra import InvalidRequest, ReadFailure, ReadTimeout
 from cassandra.query import SimpleStatement, dict_factory, named_tuple_factory
-
 from datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from dtest import debug, run_scenarios
 from tools import known_failure, rows_to_list, since
@@ -838,6 +838,9 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                 for j in range(4):
                     cursor.execute("INSERT INTO test (a, b, c, s1, s2) VALUES (%d, %d, %d, %d, %d)" % (i, j, j, 17, 42))
 
+            sleeptime = random.choice([0.1, 0.2, 0.3, 0.4, 0.5])
+            debug("sleeping for {}".format(sleeptime))
+            time.sleep(sleeptime)
             selectors = (
                 "*",
                 "a, b, c, s1, s2",
@@ -854,7 +857,22 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     import pprint
                     pprint.pprint(results)
                     # self.assertEqual(16, len(results))
-                    self.assertEqual([0] * 4 + [1] * 4 + [2] * 4 + [3] * 4, sorted([r.a for r in results]))
+                    try:
+                        self.assertEqual([0] * 4 + [1] * 4 + [2] * 4 + [3] * 4, sorted([r.a for r in results]))
+                    except AssertionError:
+                        # for ci debugging purposes, want to see if results are still missing after a few seconds
+                        debug("AssertionError, pausing to see results again before raising")
+                        time.sleep(5)
+                        debug("results after pause:")
+                        results = list(cursor.execute("SELECT %s FROM test" % selector))
+                        debug(pprint.pformat(results))
+                        if [0] * 4 + [1] * 4 + [2] * 4 + [3] * 4 == sorted([r.a for r in results]):
+                            debug("assertion would pass now")
+                        else:
+                            debug("assertion would still fail")
+                        debug("raising original error now")
+                        raise
+
                     self.assertEqual([0, 1, 2, 3] * 4, [r.b for r in results])
                     self.assertEqual([0, 1, 2, 3] * 4, [r.c for r in results])
                     if "s1" in selector:
