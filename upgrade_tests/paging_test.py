@@ -1,4 +1,5 @@
 import itertools
+import pprint
 import random
 import time
 import uuid
@@ -831,6 +832,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             cursor.row_factory = dict_factory
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
+
             cursor.execute("TRUNCATE test")
             cursor.row_factory = named_tuple_factory
 
@@ -854,7 +856,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                 for selector in selectors:
                     debug("Using selector '%s'" % (selector,))
                     results = list(cursor.execute("SELECT %s FROM test" % selector))
-                    import pprint
                     pprint.pprint(results)
                     # self.assertEqual(16, len(results))
                     try:
@@ -870,6 +871,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                             debug("assertion would pass now")
                         else:
                             debug("assertion would still fail")
+                        import ipdb
+                        ipdb.set_trace()
                         debug("raising original error now")
                         raise
 
