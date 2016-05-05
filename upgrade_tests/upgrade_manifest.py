@@ -34,7 +34,7 @@ next_3_x = None  # None if not yet tagged
 head_trunk = VersionMeta(name='head_trunk', variant='indev', version='git:trunk', min_proto_v=3, max_proto_v=4)
 
 
-# maps an VersionMeta representing a line/variant to a list of other UpgradeMeta's representing supported upgrades
+# maps an VersionMeta representing a line/variant to a list of other VersionMeta's representing supported upgrades
 MANIFEST = {
     # commented out until we have a solution for specifying java versions in upgrade tests
     # indev_2_0_x:                [indev_2_1_x, current_2_1_x, next_2_1_x],
