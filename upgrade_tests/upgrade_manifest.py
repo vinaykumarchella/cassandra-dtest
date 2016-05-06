@@ -36,12 +36,10 @@ head_trunk = VersionMeta(name='head_trunk', variant='indev', version='git:trunk'
 
 # maps an VersionMeta representing a line/variant to a list of other VersionMeta's representing supported upgrades
 MANIFEST = {
-    current_2_1_x: [next_3_0_x, next_3_x],
-    current_2_2_x: [next_3_0_x, next_3_x],
-    current_3_0_x: [next_3_0_x, next_3_x],
-    next_3_0_x:    [indev_3_0_x, indev_3_x, head_trunk],
-    current_3_x:   [next_3_x],
-    next_3_x:      [indev_3_x, head_trunk],
+    current_2_1_x: [next_3_0_x],
+    current_2_2_x: [next_3_0_x],
+    current_3_0_x: [next_3_0_x],
+    next_3_0_x:    [current_3_x, head_trunk],
 }
 
 

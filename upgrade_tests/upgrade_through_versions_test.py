@@ -19,8 +19,8 @@ from tools import generate_ssl_stores, known_failure, new_node
 from upgrade_base import UPGRADE_TEST_RUN, switch_jdks
 from upgrade_manifest import (build_upgrade_pairs, current_2_0_x,
                               current_2_1_x, current_2_2_x, current_3_0_x,
-                              head_trunk, indev_2_2_x, next_2_2_x, next_3_0_x,
-                              next_3_x)
+                              current_3_x, head_trunk, indev_2_2_x, next_2_2_x,
+                              next_3_0_x, next_3_x)
 
 
 def data_writer(tester, to_verify_queue, verification_done_queue, rewrite_probability=0):
@@ -793,16 +793,9 @@ MultiUpgrade = namedtuple('MultiUpgrade', ('name', 'version_metas', 'protocol_ve
 MULTI_UPGRADES = (
     # Proto v3 upgrades (v3 is supported on 2.1, 2.2, 3.0, 3.1, trunk)
     MultiUpgrade(name='ProtoV3Upgrade_AllVersions_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_1_x, current_2_2_x, next_3_0_x, next_3_x, head_trunk], protocol_version=3, extra_config=None),
+                 version_metas=[current_2_1_x, current_2_2_x, next_3_0_x, current_3_x, head_trunk], protocol_version=3, extra_config=None),
     MultiUpgrade(name='ProtoV3Upgrade_AllVersions_RandomPartitioner_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_1_x, current_2_2_x, next_3_0_x, next_3_x, head_trunk], protocol_version=3,
-                 extra_config=(
-                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
-                 )),
-    MultiUpgrade(name='ProtoV3Upgrade_AllVersions_Skips_3_0_x_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_1_x, current_2_2_x, next_3_x, head_trunk], protocol_version=3, extra_config=None),
-    MultiUpgrade(name='ProtoV3Upgrade_AllVersions_RandomPartitioner_Skips_3_0_x_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_1_x, current_2_2_x, next_3_x, head_trunk], protocol_version=3,
+                 version_metas=[current_2_1_x, current_2_2_x, next_3_0_x, current_3_x, head_trunk], protocol_version=3,
                  extra_config=(
                      ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
                  )),
