@@ -70,7 +70,8 @@ def _is_targeted_variant_combo(origin_meta, destination_meta):
     """
     return (origin_meta.variant == 'current' and destination_meta.variant == 'indev')\
         or (origin_meta.variant == 'current' and destination_meta.variant == 'next')\
-        or (origin_meta.variant == 'next' and destination_meta.variant == 'indev')
+        or (origin_meta.variant == 'next' and destination_meta.variant == 'indev')\
+        or (origin_meta.variant == 'next' and destination_meta.variant == 'next')
 
 
 def build_upgrade_pairs():
