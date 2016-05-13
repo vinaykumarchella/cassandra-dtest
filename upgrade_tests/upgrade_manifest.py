@@ -28,8 +28,8 @@ current_3_0_x = VersionMeta(name='current_3_0_x', variant='current', version='3.
 next_3_0_x = VersionMeta(name='next_3_0_x', variant='next', version='git:3.0.6-tentative', min_proto_v=3, max_proto_v=4)
 
 indev_3_x = VersionMeta(name='indev_3_x', variant='indev', version='git:cassandra-3.7', min_proto_v=3, max_proto_v=4)
-current_3_x = VersionMeta(name='current_3_x', variant='current', version='3.3', min_proto_v=3, max_proto_v=4)
-next_3_x = VersionMeta(name='next_3_x', variant='next', version='3.4', min_proto_v=3, max_proto_v=4)
+current_3_x = VersionMeta(name='current_3_x', variant='current', version='3.4', min_proto_v=3, max_proto_v=4)
+next_3_x = VersionMeta(name='next_3_x', variant='next', version='3.5', min_proto_v=3, max_proto_v=4)
 
 head_trunk = VersionMeta(name='head_trunk', variant='indev', version='git:trunk', min_proto_v=3, max_proto_v=4)
 
