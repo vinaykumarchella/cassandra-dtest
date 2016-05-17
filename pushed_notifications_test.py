@@ -80,9 +80,6 @@ class TestPushedNotifications(Tester):
     """
     Tests for pushed native protocol notification from Cassandra.
     """
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11731',
-                   flaky=True)
     @no_vnodes()
     def move_single_node_test(self):
         """
@@ -98,9 +95,9 @@ class TestPushedNotifications(Tester):
 
         waiters = [NotificationWaiter(self, node, ["TOPOLOGY_CHANGE"])
                    for node in self.cluster.nodes.values()]
-        waiters[0].wait_for_notifications(timeout=60, num_notifications=1)
 
         for waiter in waiters:
+            waiter.wait_for_notifications(timeout=60, num_notifications=1)
             waiter.clear_notifications()
 
         node1 = self.cluster.nodes.values()[0]
