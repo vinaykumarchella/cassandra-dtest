@@ -97,7 +97,7 @@ class TestPushedNotifications(Tester):
                    for node in self.cluster.nodes.values()]
 
         for waiter in waiters:
-            waiter.wait_for_notifications(timeout=60, num_notifications=1)
+            waiter.wait_for_notifications(timeout=60, num_notifications=3)
             waiter.clear_notifications()
 
         node1 = self.cluster.nodes.values()[0]
