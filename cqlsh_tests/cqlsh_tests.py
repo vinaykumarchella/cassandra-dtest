@@ -476,7 +476,10 @@ UPDATE varcharmaptable SET varcharvarintmap['Vitrum edere possum, mihi non nocet
         output, err = node1.run_cqlsh(cmds=cmd, return_output=True)
 
         err = err.decode('utf8')
-        self.assertIn(u'"ä" is not a valid keyspace name', err)
+        try:
+            self.assertIn(u'"ä" is not a valid keyspace name', err)
+        except:
+            print err, "<<<<<<<<<<<<<<<< WTF"
 
     def test_with_empty_values(self):
         """
