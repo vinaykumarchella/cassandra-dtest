@@ -357,6 +357,7 @@ class TestScrub(TestHelper):
                    flaky=True,
                    notes='windows')
     def test_nodetool_scrub(self):
+        self.maxDiff = None
         cluster = self.cluster
         cluster.populate(1).start()
         node1 = cluster.nodelist()[0]
