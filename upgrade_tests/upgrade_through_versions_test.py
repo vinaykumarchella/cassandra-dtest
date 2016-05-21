@@ -222,9 +222,9 @@ def counter_checker(tester, to_verify_queue, verification_done_queue):
 
 class UpgradeTester(Tester):
     """
-    Upgrades a 3-node Murmur3Partitioner cluster through versions specified in test_versions.
+    Upgrades a 3-node Murmur3Partitioner cluster through versions specified in test_version_metas.
     """
-    test_versions = None  # set on init to know which versions to use
+    test_version_metas = None  # set on init to know which versions to use
     subprocs = None  # holds any subprocesses, for status checking and cleanup
     extra_config = None  # holds a non-mutable structure that can be cast as dict()
     __test__ = False  # this is a base class only
@@ -243,10 +243,13 @@ class UpgradeTester(Tester):
         Tester.__init__(self, *args, **kwargs)
 
     def setUp(self):
+        debug("Upgrade test beginning, setting CASSANDRA_VERSION to {}, and jdk to {}. (Prior values will be restored after test)."
+              .format(self.test_version_metas[0].version, self.test_version_metas[0].java_version))
+        os.environ['CASSANDRA_VERSION'] = self.test_version_metas[0].version
+        switch_jdks(self.test_version_metas[0].java_version)
+
         super(UpgradeTester, self).setUp()
-        debug("Versions to test (%s): %s" % (type(self), str([v for v in self.test_versions])))
-        switch_jdks(self.test_versions[0])
-        self.cluster.set_install_dir(version=self.test_versions[0])
+        debug("Versions to test (%s): %s" % (type(self), str([v.version for v in self.test_version_metas])))
 
     def init_config(self):
         self.init_default_config()
@@ -268,6 +271,15 @@ class UpgradeTester(Tester):
     @known_failure(failure_source='cassandra',
                    jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11393',
                    flaky=True)
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11763',
+                   flaky=True)
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11765',
+                   flaky=True)
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11767',
+                   flaky=True)
     def rolling_upgrade_test(self):
         """
         Test rolling upgrade of the cluster, so we have mixed versions part way through.
@@ -280,10 +292,9 @@ class UpgradeTester(Tester):
         """
         self.upgrade_scenario(internode_ssl=True)
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11668',
-                   flaky=True,
-                   notes='failing on 3.2 upgrade to 3.3 head')
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11763',
+                   flaky=True)
     def rolling_upgrade_with_internode_ssl_test(self):
         """
         Rolling upgrade test using internode ssl.
@@ -307,7 +318,7 @@ class UpgradeTester(Tester):
 
         if populate:
             # Start with 3 node cluster
-            debug('Creating cluster (%s)' % self.test_versions[0])
+            debug('Creating cluster (%s)' % self.test_version_metas[0].version)
             cluster.populate(3)
             [node.start(use_jna=True, wait_for_binary_proto=True) for node in cluster.nodelist()]
         else:
@@ -327,7 +338,7 @@ class UpgradeTester(Tester):
             debug("Skipping schema creation (should already be built)")
         time.sleep(5)  # sigh...
 
-        self._log_current_ver(self.test_versions[0])
+        self._log_current_ver(self.test_version_metas[0])
 
         if rolling:
             # start up processes to write and verify data
@@ -335,7 +346,7 @@ class UpgradeTester(Tester):
             increment_proc, incr_verify_proc, incr_verify_queue = self._start_continuous_counter_increment_and_verify(wait_for_rowcount=5000)
 
             # upgrade through versions
-            for tag in self.test_versions[1:]:
+            for version_meta in self.test_version_metas[1:]:
                 for num, node in enumerate(self.cluster.nodelist()):
                     # sleep (sigh) because driver needs extra time to keep up with topo and make quorum possible
                     # this is ok, because a real world upgrade would proceed much slower than this programmatic one
@@ -343,13 +354,13 @@ class UpgradeTester(Tester):
                     # possibly "speed past" in an overly fast upgrade test
                     time.sleep(60)
 
-                    self.upgrade_to_version(tag, partial=True, nodes=(node,))
+                    self.upgrade_to_version(version_meta, partial=True, nodes=(node,))
 
                     self._check_on_subprocs(self.subprocs)
                     debug('Successfully upgraded %d of %d nodes to %s' %
-                          (num + 1, len(self.cluster.nodelist()), tag))
+                          (num + 1, len(self.cluster.nodelist()), version_meta.version))
 
-                self.cluster.set_install_dir(version=tag)
+                self.cluster.set_install_dir(version=version_meta.version)
 
             # Stop write processes
             write_proc.terminate()
@@ -363,12 +374,12 @@ class UpgradeTester(Tester):
         # not a rolling upgrade, do everything in parallel:
         else:
             # upgrade through versions
-            for tag in self.test_versions[1:]:
+            for version_meta in self.test_version_metas[1:]:
                 self._write_values()
                 self._increment_counters()
 
-                self.upgrade_to_version(tag)
-                self.cluster.set_install_dir(version=tag)
+                self.upgrade_to_version(version_meta)
+                self.cluster.set_install_dir(version=version_meta.version)
 
                 self._check_values()
                 self._check_counters()
@@ -378,8 +389,8 @@ class UpgradeTester(Tester):
         for call in after_upgrade_call:
             call()
 
-            debug('All nodes successfully upgraded to %s' % tag)
-            self._log_current_ver(tag)
+            debug('All nodes successfully upgraded to %s' % version_meta.version)
+            self._log_current_ver(version_meta)
 
         cluster.stop()
 
@@ -413,14 +424,14 @@ class UpgradeTester(Tester):
                     debug("Error terminating subprocess. There could be a lingering process.")
                     pass
 
-    def upgrade_to_version(self, tag, partial=False, nodes=None):
+    def upgrade_to_version(self, version_meta, partial=False, nodes=None):
         """
         Upgrade Nodes - if *partial* is True, only upgrade those nodes
         that are specified by *nodes*, otherwise ignore *nodes* specified
         and upgrade all nodes.
         """
-        debug('Upgrading {nodes} to {tag}'.format(nodes=[n.name for n in nodes] if nodes is not None else 'all nodes', tag=tag))
-        switch_jdks(tag)
+        debug('Upgrading {nodes} to {version}'.format(nodes=[n.name for n in nodes] if nodes is not None else 'all nodes', version=version_meta.version))
+        switch_jdks(version_meta.java_version)
         debug("JAVA_HOME: " + os.environ.get('JAVA_HOME'))
         if not partial:
             nodes = self.cluster.nodelist()
@@ -432,7 +443,7 @@ class UpgradeTester(Tester):
             node.stop(wait_other_notice=False)
 
         for node in nodes:
-            node.set_install_dir(version=tag)
+            node.set_install_dir(version=version_meta.version)
             debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
 
         # hacky? yes. We could probably extend ccm to allow this publicly.
@@ -442,21 +453,21 @@ class UpgradeTester(Tester):
 
         # Restart nodes on new version
         for node in nodes:
-            debug('Starting %s on new version (%s)' % (node.name, tag))
+            debug('Starting %s on new version (%s)' % (node.name, version_meta.version))
             # Setup log4j / logback again (necessary moving from 2.0 -> 2.1):
             node.set_log_level("INFO")
             node.start(wait_other_notice=True, wait_for_binary_proto=True)
             node.nodetool('upgradesstables -a')
 
-    def _log_current_ver(self, current_tag):
+    def _log_current_ver(self, current_version_meta):
         """
         Logs where we currently are in the upgrade path, surrounding the current branch/tag, like ***sometag***
         """
-        vers = self.test_versions
-        curr_index = vers.index(current_tag)
+        vers = [m.version for m in self.test_version_metas]
+        curr_index = vers.index(current_version_meta.version)
         debug(
             "Current upgrade path: {}".format(
-                vers[:curr_index] + ['***' + current_tag + '***'] + vers[curr_index + 1:]))
+                vers[:curr_index] + ['***' + current_version_meta.version + '***'] + vers[curr_index + 1:]))
 
     def _create_schema_for_rolling(self):
         """
@@ -746,7 +757,7 @@ class BootstrapMixin(object):
                 );""")
 
 
-def create_upgrade_class(clsname, version_list, protocol_version,
+def create_upgrade_class(clsname, version_metas, protocol_version,
                          bootstrap_test=False, extra_config=None):
     """
     Dynamically creates a test subclass for testing the given versions.
@@ -770,14 +781,14 @@ def create_upgrade_class(clsname, version_list, protocol_version,
     parent_class_names = [cls.__name__ for cls in parent_classes]
 
     print_("Creating test class {} ".format(clsname))
-    print_("  for C* versions: {} ".format(version_list))
+    print_("  for C* versions: {} ".format(version_metas))
     print_("  using protocol: v{}, and parent classes: {}".format(protocol_version, parent_class_names))
     print_("  to run these tests alone, use `nosetests {}.py:{}`".format(__name__, clsname))
 
     newcls = type(
         clsname,
         parent_classes,
-        {'test_versions': version_list, '__test__': UPGRADE_TEST_RUN, 'protocol_version': protocol_version, 'extra_config': extra_config}
+        {'test_version_metas': version_metas, '__test__': UPGRADE_TEST_RUN, 'protocol_version': protocol_version, 'extra_config': extra_config}
     )
 
     if clsname in globals():
@@ -789,6 +800,38 @@ def create_upgrade_class(clsname, version_list, protocol_version,
 
 MultiUpgrade = namedtuple('MultiUpgrade', ('name', 'version_metas', 'protocol_version', 'extra_config'))
 
+MULTI_UPGRADES = (
+    # Proto v1 upgrades (v1 supported on 2.0, 2.1, 2.2)
+    MultiUpgrade(name='ProtoV1Upgrade_AllVersions_EndsAt_indev_2_2_x',
+                 version_metas=[current_2_0_x, current_2_1_x, indev_2_2_x], protocol_version=1, extra_config=None),
+    MultiUpgrade(name='ProtoV1Upgrade_AllVersions_RandomPartitioner_EndsAt_indev_2_2_x',
+                 version_metas=[current_2_0_x, current_2_1_x, indev_2_2_x], protocol_version=1,
+                 extra_config=(
+                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
+                 )),
+    MultiUpgrade(name='ProtoV1Upgrade_AllVersions_EndsAt_next_2_2_x',
+                 version_metas=[current_2_0_x, current_2_1_x, next_2_2_x], protocol_version=1, extra_config=None),
+    MultiUpgrade(name='ProtoV1Upgrade_AllVersions_RandomPartitioner_EndsAt_indev_2_2_x',
+                 version_metas=[current_2_0_x, current_2_1_x, next_2_2_x], protocol_version=1,
+                 extra_config=(
+                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
+                 )),
+
+    # Proto v2 upgrades (v2 is supported on 2.0, 2.1, 2.2)
+    MultiUpgrade(name='ProtoV2Upgrade_AllVersions_EndsAt_indev_2_2_x',
+                 version_metas=[current_2_0_x, current_2_1_x, indev_2_2_x], protocol_version=2, extra_config=None),
+    MultiUpgrade(name='ProtoV2Upgrade_AllVersions_RandomPartitioner_EndsAt_indev_2_2_x',
+                 version_metas=[current_2_0_x, current_2_1_x, indev_2_2_x], protocol_version=2,
+                 extra_config=(
+                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
+                 )),
+    MultiUpgrade(name='ProtoV2Upgrade_AllVersions_EndsAt_next_2_2x',
+                 version_metas=[current_2_0_x, current_2_1_x, next_2_2_x], protocol_version=2, extra_config=None),
+    MultiUpgrade(name='ProtoV2Upgrade_AllVersions_RandomPartitioner_EndsAt_next_2_2_x',
+                 version_metas=[current_2_0_x, current_2_1_x, next_2_2_x], protocol_version=2,
+                 extra_config=(
+                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
+                 )),
 
 MULTI_UPGRADES = (
     # Proto v3 upgrades (v3 is supported on 2.1, 2.2, 3.0, 3.1, trunk)
@@ -811,13 +854,13 @@ MULTI_UPGRADES = (
 for upgrade in MULTI_UPGRADES:
     # if any version_metas are None, this means they are verions not to be tested currently
     if all(upgrade.version_metas):
-        create_upgrade_class(upgrade.name, [m.version for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
+        create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
 
 
 for pair in build_upgrade_pairs():
     create_upgrade_class(
         'Test' + pair.name,
-        [pair.starting_version, pair.upgrade_version],
+        [pair.starting_meta, pair.upgrade_meta],
         protocol_version=pair.starting_meta.max_proto_v,
         bootstrap_test=True
     )

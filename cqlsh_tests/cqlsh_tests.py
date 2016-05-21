@@ -19,7 +19,8 @@ from ccmlib import common
 from assertions import assert_all, assert_none
 from cqlsh_tools import monkeypatch_driver, unmonkeypatch_driver
 from dtest import Tester, debug
-from tools import create_c1c2_table, insert_c1c2, rows_to_list, since
+from tools import (create_c1c2_table, insert_c1c2, known_failure, rows_to_list,
+                   since)
 
 
 class TestCqlsh(Tester):
@@ -437,6 +438,45 @@ UPDATE varcharmaptable SET varcharvarintmap['Vitrum edere possum, mihi non nocet
         node1.run_cqlsh(cmds="SOURCE 'cqlsh_tests/glass.cql'")
 
         self.verify_glass(node1)
+
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11799',
+                   flaky=False)
+    def test_unicode_syntax_error(self):
+        """
+        Ensure that syntax errors involving unicode are handled correctly.
+        @jira_ticket CASSANDRA-11626
+        """
+
+        self.cluster.populate(1)
+        self.cluster.start(wait_for_binary_proto=True)
+
+        node1, = self.cluster.nodelist()
+
+        output, err = node1.run_cqlsh(cmds=u"ä;".encode('utf8'), return_output=True)
+        err = err.decode('utf8')
+        self.assertIn(u'Invalid syntax', err)
+        self.assertIn(u'ä', err)
+
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11799',
+                   flaky=False)
+    def test_unicode_invalid_request_error(self):
+        """
+        Ensure that invalid request errors involving unicode are handled correctly.
+        @jira_ticket CASSANDRA-11626
+        """
+        self.cluster.populate(1)
+        self.cluster.start(wait_for_binary_proto=True)
+
+        node1, = self.cluster.nodelist()
+
+        cmd = u'''create keyspace "ä" WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'};'''
+        cmd = cmd.encode('utf8')
+        output, err = node1.run_cqlsh(cmds=cmd, return_output=True)
+
+        err = err.decode('utf8')
+        self.assertIn(u'"ä" is not a valid keyspace name', err)
 
     def test_with_empty_values(self):
         """
@@ -1541,9 +1581,11 @@ Tracing session:""")
         self.assertEqual(0, len(stderr), stderr)
         self.assertEqual(0, len(stdout), stdout)
 
-    def run_cqlsh(self, node, cmds, cqlsh_options=[], env_vars=None):
+    def run_cqlsh(self, node, cmds, cqlsh_options=None, env_vars=None):
         if env_vars is None:
             env_vars = {}
+        if cqlsh_options is None:
+            cqlsh_options = []
         cdir = node.get_install_dir()
         cli = os.path.join(cdir, 'bin', common.platform_binary('cqlsh'))
         env = common.make_cassandra_env(cdir, node.get_path())

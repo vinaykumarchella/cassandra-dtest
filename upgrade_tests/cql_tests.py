@@ -1693,8 +1693,7 @@ class TestCQL(UpgradeTester):
                 cursor.execute("INSERT INTO test (k, v) VALUES (%s, %s)", (i, i))
 
             cursor.default_fetch_size = None
-            results = rows_to_list(cursor.execute("SELECT * FROM test"))
-            results.sort()
+            results = sorted(rows_to_list(cursor.execute("SELECT * FROM test")))
             self.assertEqual(10, len(results))
             self.assertEqual([[i, i] for i in range(10)], results)
 
@@ -2459,7 +2458,7 @@ class TestCQL(UpgradeTester):
             ('test', '10015', 'NY', 36, 'New York'),
             ('test', '07182', 'NJ', 34, 'Newark'),
             ('test', '73301', 'TX', 48, 'Austin'),
-            ('test', '94102', 'CA', 06, 'San Francisco'),
+            ('test', '94102', 'CA', 6, 'San Francisco'),
 
             ('test2', '06029', 'CT', 9, 'Ellington'),
             ('test2', '06031', 'CT', 9, 'Falls Village'),
@@ -2468,7 +2467,7 @@ class TestCQL(UpgradeTester):
             ('test2', '10015', 'NY', 36, 'New York'),
             ('test2', '07182', 'NJ', 34, 'Newark'),
             ('test2', '73301', 'TX', 48, 'Austin'),
-            ('test2', '94102', 'CA', 06, 'San Francisco'),
+            ('test2', '94102', 'CA', 6, 'San Francisco'),
         ]
 
         create = """
@@ -3530,6 +3529,9 @@ class TestCQL(UpgradeTester):
     @known_failure(failure_source='cassandra',
                    jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11613',
                    flaky=False)
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11760',
+                   flaky=False)
     def more_user_types_test(self):
         """ user type test that does a little more nesting"""
 
@@ -3636,6 +3638,10 @@ class TestCQL(UpgradeTester):
             execute_concurrent_with_args(cursor, insert_statement, [(i,) for i in range(10002, 15001)])
             assert_one(cursor, "SELECT COUNT(*) FROM test", [15000])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11862',
+                   flaky=False,
+                   notes='Fails on 2.0 to 2.1 upgrade')
     def collection_indexing_test(self):
         cursor = self.prepare()
 
@@ -3684,6 +3690,10 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT k, v FROM test WHERE m CONTAINS 2", [[0, 1]])
             assert_none(cursor, "SELECT k, v FROM test  WHERE m CONTAINS 4")
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11861',
+                   flaky=False,
+                   notes='Fails on 2.0 to 2.1 upgrade')
     def map_keys_indexing_test(self):
         cursor = self.prepare()
 
@@ -3815,6 +3825,10 @@ class TestCQL(UpgradeTester):
             cursor.execute("DELETE s FROM test WHERE k=0")
             assert_all(cursor, "SELECT * FROM test", [[0, 1, None, 1]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11858',
+                   flaky=False,
+                   notes='Fails on 2.0 to 2.1 upgrade')
     def static_columns_cas_test(self):
         cursor = self.prepare()
 
@@ -3972,6 +3986,10 @@ class TestCQL(UpgradeTester):
             # We don't support that
             assert_invalid(cursor, "SELECT s FROM test WHERE v = 1")
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11863',
+                   flaky=False,
+                   notes='Fails on 2.0 to 2.1 upgrade')
     def static_columns_with_distinct_test(self):
         cursor = self.prepare()
 
@@ -4192,6 +4210,10 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT * FROM test WHERE k=0 AND c1 = 0 AND c2 IN (0, 2) ORDER BY c1 ASC", [[0, 0, 0], [0, 0, 2]])
             assert_all(cursor, "SELECT * FROM test WHERE k=0 AND c1 = 0 AND c2 IN (0, 2) ORDER BY c1 DESC", [[0, 0, 2], [0, 0, 0]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11859',
+                   flaky=False,
+                   notes='Fails on 2.0 to 2.1 upgrade')
     def in_order_by_without_selecting_test(self):
         """ Test that columns don't need to be selected for ORDER BY when there is a IN (#4911) """
 
@@ -4332,6 +4354,10 @@ class TestCQL(UpgradeTester):
                 # not supported yet
                 check_invalid("m CONTAINS 'bar'", expected=SyntaxException)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11856',
+                   flaky=False,
+                   notes='Fails on 2.0 to 2.1 upgrade')
     def list_item_conditional_test(self):
         # Lists
         cursor = self.prepare()
@@ -4598,6 +4624,10 @@ class TestCQL(UpgradeTester):
                 check_invalid("m CONTAINS null", expected=SyntaxException)
                 check_invalid("m CONTAINS KEY null", expected=SyntaxException)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11857',
+                   flaky=False,
+                   notes='Fails on 2.0 to 2.1 upgrade')
     def map_item_conditional_test(self):
         cursor = self.prepare()
 
@@ -4847,6 +4877,10 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, "SELECT * FROM test WHERE k2 = 0 AND v >= 2 ALLOW FILTERING", [[2, 0, 7], [0, 0, 3], [1, 0, 4]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11860',
+                   flaky=False,
+                   notes='Fails on 2.0 to 2.1 upgrade')
     def invalid_custom_timestamp_test(self):
         cursor = self.prepare()
 
