@@ -833,7 +833,6 @@ MULTI_UPGRADES = (
                      ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
                  )),
 
-MULTI_UPGRADES = (
     # Proto v3 upgrades (v3 is supported on 2.1, 2.2, 3.0, 3.1, trunk)
     MultiUpgrade(name='ProtoV3Upgrade_AllVersions_EndsAt_Trunk_HEAD',
                  version_metas=[current_2_1_x, current_2_2_x, current_3_0_x, next_3_x, head_trunk], protocol_version=3, extra_config=None),
