@@ -7,6 +7,10 @@ from cassandra.query import SimpleStatement
 
 from tools import rows_to_list
 
+from nose.tools import eq_, assert_false
+
+from time import sleep
+
 
 def assert_unavailable(fun, *args):
     try:
@@ -102,3 +106,17 @@ def assert_crc_check_chance_equal(session, table, expected, ks="ks", view=False)
                    "SELECT crc_check_chance from system_schema.tables WHERE keyspace_name = 'ks' AND "
                    "table_name = '{table}';".format(table=table),
                    [expected])
+
+
+def assert_bootstrap_state(exclusive_session, state):
+    rows = exclusive_session.execute("SELECT bootstrapped FROM system.local WHERE key='local'")
+    eq_(rows[0][0], state)
+
+
+def assert_not_running(node):
+    attempts = 0
+    while node.is_running() and attempts < 10:
+        sleep(1)
+        attempts = attempts + 1
+
+    assert_false(node.is_running())
