@@ -470,6 +470,11 @@ class TestSecondaryIndexesOnCollections(Tester):
     def __init__(self, *args, **kwargs):
         Tester.__init__(self, *args, **kwargs)
 
+    def index_is_built(self, session, keyspace_name, index_name):
+        return len(list(session.execute(
+            """SELECT * FROM system."IndexInfo"
+               WHERE table_name ='{keyspace}' AND index_name='{index}'""".format(keyspace = keyspace_name, index = index_name)))) == 1
+        
     def test_tuple_indexes(self):
         """
         Checks that secondary indexes on tuples work for querying
@@ -504,7 +509,12 @@ class TestSecondaryIndexesOnCollections(Tester):
         session.execute("CREATE INDEX idx_double_tuple ON simple_with_tuple(double_tuple);")
         session.execute("CREATE INDEX idx_triple_tuple ON simple_with_tuple(triple_tuple);")
         session.execute("CREATE INDEX idx_nested_tuple ON simple_with_tuple(nested_one);")
-        time.sleep(10)
+
+        for index_name in ['idx_single_tuple', 'idx_double_tuple', 'idx_triple_tuple', 'idx_nested_tuple']:
+            start = time.time()
+            while not self.index_is_built(session, 'tuple_index_test', index_name) and time.time() < start + 30:
+                debug("waiting for index to build")
+                time.sleep(1)
 
         # check if indexes work on existing data
         for n in range(50):
