@@ -71,6 +71,12 @@ def assert_one(session, query, expected, cl=ConsistencyLevel.ONE):
 
 
 def assert_none(session, query, cl=ConsistencyLevel.ONE):
+    """
+    Assert query returns nothing
+    @param session Session to use
+    @param query Query to run
+    @param cl Optional Consistency Level setting. Default ONE
+    """
     simple_query = SimpleStatement(query, consistency_level=cl)
     res = session.execute(simple_query)
     list_res = rows_to_list(res)
