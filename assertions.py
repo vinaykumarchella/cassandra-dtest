@@ -25,7 +25,7 @@ def assert_unavailable(fun, *args):
 def assert_invalid(session, query, matching=None, expected=InvalidRequest):
     try:
         res = session.execute(query)
-        assert False, "Expecting query to be invalid: got %s" % res
+        assert False, "Expecting query to be invalid: got {}".format(res)
     except AssertionError as e:
         raise e
     except expected as e:
@@ -55,7 +55,7 @@ def assert_none(session, query, cl=ConsistencyLevel.ONE):
     simple_query = SimpleStatement(query, consistency_level=cl)
     res = session.execute(simple_query)
     list_res = rows_to_list(res)
-    assert list_res == [], "Expected nothing from %s, but got %s" % (query, list_res)
+    assert list_res == [], "Expected nothing from {}, but got {}".format(query, list_res)
 
 
 def assert_all(session, query, expected, cl=ConsistencyLevel.ONE, ignore_order=False):
@@ -65,7 +65,7 @@ def assert_all(session, query, expected, cl=ConsistencyLevel.ONE, ignore_order=F
     if ignore_order:
         expected = sorted(expected)
         list_res = sorted(list_res)
-    assert list_res == expected, "Expected %s from %s, but got %s" % (expected, query, list_res)
+    assert list_res == expected, "Expected {} from {}, but got {}".format(expected, query, list_res)
 
 
 def assert_almost_equal(*args, **kwargs):
