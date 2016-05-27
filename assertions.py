@@ -32,7 +32,7 @@ def assert_invalid(session, query, matching=None, expected=InvalidRequest):
     Attempt to issue a query and assert that the query is invalid.
     @param session Session to use
     @param query Invalid query to run
-    @param matching Optional error message string contained within excepted exception 
+    @param matching Optional error message string contained within excepted exception
     @param expected Exception expected to be raised by the invalid query
     """
     try:
@@ -84,6 +84,14 @@ def assert_none(session, query, cl=ConsistencyLevel.ONE):
 
 
 def assert_all(session, query, expected, cl=ConsistencyLevel.ONE, ignore_order=False):
+    """
+    Assert query returns all expected items optionally in the correct order
+    @param session Session in use
+    @param query Query to run
+    @param expected Expected results from query
+    @param cl Optional Consistency Level setting. Default ONE
+    @param ignore_order Optional boolean flag determining whether response is ordered
+    """
     simple_query = SimpleStatement(query, consistency_level=cl)
     res = session.execute(simple_query)
     list_res = rows_to_list(res)
@@ -94,6 +102,9 @@ def assert_all(session, query, expected, cl=ConsistencyLevel.ONE, ignore_order=F
 
 
 def assert_almost_equal(*args, **kwargs):
+    """
+
+    """
     error = kwargs['error'] if 'error' in kwargs else 0.16
     vmax = max(args)
     vmin = min(args)
