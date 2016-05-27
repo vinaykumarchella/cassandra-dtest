@@ -34,7 +34,7 @@ class TestAuthUpgrade(Tester):
                    flaky=True,
                    notes='windows')
     def upgrade_to_22_test(self):
-        self.do_upgrade_with_internal_auth("git:cassandra-2.2")
+        self.do_upgrade_with_internal_auth("github:beobal/11469-2.2")
 
     @known_failure(failure_source='cassandra',
                    jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11393',
