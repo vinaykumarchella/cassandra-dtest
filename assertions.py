@@ -49,18 +49,25 @@ def assert_invalid(session, query, matching=None, expected=InvalidRequest):
 def assert_unauthorized(session, query, message):
     """
     Attempt to issue a query, and assert Unauthorized is raised.
-    @param message Expected error message
     @param session Session to use
     @param query Unauthorized query to run
+    @param message Expected error message
     """
     assert_invalid(session, query, message, Unauthorized)
 
 
 def assert_one(session, query, expected, cl=ConsistencyLevel.ONE):
+    """
+    Assert query returns one row.
+    @param session Session to use
+    @param query Query to run
+    @param expected Expected results from query
+    @param cl Optional Consistency Level setting. Default ONE
+    """
     simple_query = SimpleStatement(query, consistency_level=cl)
     res = session.execute(simple_query)
     list_res = rows_to_list(res)
-    assert list_res == [expected], "Expected {} from {}, but got {}" .format([expected], query, list_res)
+    assert list_res == [expected], "Expected {} from {}, but got {}".format([expected], query, list_res)
 
 
 def assert_none(session, query, cl=ConsistencyLevel.ONE):
@@ -85,7 +92,7 @@ def assert_almost_equal(*args, **kwargs):
     vmax = max(args)
     vmin = min(args)
     error_message = '' if 'error_message' not in kwargs else kwargs['error_message']
-    assert vmin > vmax * (1.0 - error) or vmin == vmax, "values not within {.2f}% of the max: {} ({})" .format(error * 100, args, error_message)
+    assert vmin > vmax * (1.0 - error) or vmin == vmax, "values not within {.2f}% of the max: {} ({})".format(error * 100, args, error_message)
 
 
 def assert_row_count(session, table_name, expected):
