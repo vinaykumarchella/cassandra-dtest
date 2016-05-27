@@ -9,6 +9,11 @@ from tools import rows_to_list
 
 
 def assert_unavailable(fun, *args):
+    """
+    Attempt to execute a function, and assert Unavailable exception is raised.
+    @param fun Function to be executed
+    @param *args Arguments to be passed to the function
+    """
     try:
         if len(args) == 0:
             fun(None)
@@ -29,7 +34,6 @@ def assert_invalid(session, query, matching=None, expected=InvalidRequest):
     @param query Invalid query to run
     @param matching Optional error message string contained within excepted exception 
     @param expected Exception expected to be raised by the invalid query
-
     """
     try:
         res = session.execute(query)
