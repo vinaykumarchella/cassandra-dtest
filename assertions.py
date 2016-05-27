@@ -23,6 +23,10 @@ def assert_unavailable(fun, *args):
 
 
 def assert_invalid(session, query, matching=None, expected=InvalidRequest):
+    """
+    
+
+    """
     try:
         res = session.execute(query)
         assert False, "Expecting query to be invalid: got {}".format(res)
@@ -48,7 +52,7 @@ def assert_one(session, query, expected, cl=ConsistencyLevel.ONE):
     simple_query = SimpleStatement(query, consistency_level=cl)
     res = session.execute(simple_query)
     list_res = rows_to_list(res)
-    assert list_res == [expected], "Expected %s from %s, but got %s" % ([expected], query, list_res)
+    assert list_res == [expected], "Expected {} from {}, but got {}" .format([expected], query, list_res)
 
 
 def assert_none(session, query, cl=ConsistencyLevel.ONE):
@@ -73,7 +77,7 @@ def assert_almost_equal(*args, **kwargs):
     vmax = max(args)
     vmin = min(args)
     error_message = '' if 'error_message' not in kwargs else kwargs['error_message']
-    assert vmin > vmax * (1.0 - error) or vmin == vmax, "values not within %.2f%% of the max: %s (%s)" % (error * 100, args, error_message)
+    assert vmin > vmax * (1.0 - error) or vmin == vmax, "values not within {.2f}% of the max: {} ({})" .format(error * 100, args, error_message)
 
 
 def assert_row_count(session, table_name, expected):
