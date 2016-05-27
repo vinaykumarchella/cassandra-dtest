@@ -24,7 +24,11 @@ def assert_unavailable(fun, *args):
 
 def assert_invalid(session, query, matching=None, expected=InvalidRequest):
     """
-    
+    Attempt to issue a query and assert that the query is invalid.
+    @param session Session to use
+    @param query Invalid query to run
+    @param matching Optional error message string contained within excepted exception 
+    @param expected Exception expected to be raised by the invalid query
 
     """
     try:
