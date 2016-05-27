@@ -101,14 +101,15 @@ def assert_all(session, query, expected, cl=ConsistencyLevel.ONE, ignore_order=F
     assert list_res == expected, "Expected {} from {}, but got {}".format(expected, query, list_res)
 
 
-def assert_almost_equal(*args, **kwargs):
+def assert_almost_equal(*args, error=0.16, error_message=''):
     """
-
+    Assert variable number of arguments all fall within a margin of error.
+    @params *args variable number of numerical arguments to check
+    @params error Optional margin of error. Default 0.16
+    @params error_message Optional error message to print. Default ''
     """
-    error = kwargs['error'] if 'error' in kwargs else 0.16
     vmax = max(args)
     vmin = min(args)
-    error_message = '' if 'error_message' not in kwargs else kwargs['error_message']
     assert vmin > vmax * (1.0 - error) or vmin == vmax, "values not within {.2f}% of the max: {} ({})".format(error * 100, args, error_message)
 
 
