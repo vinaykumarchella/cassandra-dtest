@@ -21,7 +21,7 @@ from thrift_bindings.v22.Cassandra import (CfDef, Column, ColumnDef,
                                            Mutation, NotFoundException,
                                            SlicePredicate, SliceRange,
                                            SuperColumn)
-from tools import known_failure, since
+from tools import since
 
 
 def get_thrift_client(host='127.0.0.1', port=9160):
@@ -1816,9 +1816,6 @@ class TestMutations(ThriftTester):
         client.system_drop_column_family('BlankCF')
         client.system_drop_column_family('BlankCF2')
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11864',
-                   flaky=True)
     def test_dynamic_indexes_with_system_update_cf(self):
         _set_keyspace('Keyspace1')
         cd = ColumnDef('birthdate', 'BytesType', None, None)
@@ -1855,7 +1852,7 @@ class TestMutations(ThriftTester):
         assert server_cf.column_metadata[0].index_name == modified_cd.index_name
 
         # sleep a bit to give time for the index to build.
-        time.sleep(0.5)
+        time.sleep(5)
 
         # repeat query on one index expression
         result = client.get_range_slices(cp, sp, key_range, ConsistencyLevel.ONE)

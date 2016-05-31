@@ -117,14 +117,18 @@ class TestSecondaryIndexes(Tester):
 
     @known_failure(failure_source='test',
                    jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11729',
-                   flaky=False)
+                   flaky=True)
     def test_6924_dropping_ks(self):
         """
         @jira_ticket CASSANDRA-6924
+        @jira_ticket CASSANDRA-11729
 
         Data inserted immediately after dropping and recreating a
         keyspace with an indexed column familiy is not included
         in the index.
+
+        This test can be flaky due to concurrency issues during
+        schema updates. See CASSANDRA-11729 for an explanation.
         """
         # Reproducing requires at least 3 nodes:
         cluster = self.cluster
@@ -470,6 +474,9 @@ class TestSecondaryIndexesOnCollections(Tester):
     def __init__(self, *args, **kwargs):
         Tester.__init__(self, *args, **kwargs)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11884',
+                   flaky=True)
     def test_tuple_indexes(self):
         """
         Checks that secondary indexes on tuples work for querying
@@ -787,6 +794,10 @@ class TestSecondaryIndexesOnCollections(Tester):
         session.cluster.refresh_schema_metadata()
         self.assertEqual(0, len(session.cluster.metadata.keyspaces["map_double_index"].indexes))
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11879',
+                   flaky=True,
+                   notes='Windows')
     @skipIf(OFFHEAP_MEMTABLES, 'Hangs with offheap memtables')
     def test_map_indexes(self):
         """
@@ -924,7 +935,7 @@ class TestSecondaryIndexesOnCollections(Tester):
                     ).format(unshared_uuid2=log_entry['unshared_uuid2'])
 
             rows = list(session.execute(stmt))
-            self.assertEqual(1, len(rows))
+            self.assertEqual(1, len(rows), rows)
 
             db_user_id, db_email, db_uuids = rows[0]
             self.assertEqual(db_user_id, log_entry['user_id'])

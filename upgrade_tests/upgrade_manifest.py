@@ -31,10 +31,10 @@ current_2_2_x = VersionMeta(name='current_2_2_x', variant='current', version='2.
 next_2_2_x = None  # None if not yet tagged
 
 indev_3_0_x = VersionMeta(name='indev_3_0_x', variant='indev', version='git:cassandra-3.0', min_proto_v=3, max_proto_v=4, java_versions=(8,))
-current_3_0_x = VersionMeta(name='current_3_0_x', variant='current', version='3.0.5', min_proto_v=3, max_proto_v=4, java_versions=(8,))
+current_3_0_x = VersionMeta(name='current_3_0_x', variant='current', version='3.0.6', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 next_3_0_x = None  # None if not yet tagged
 
-indev_3_x = VersionMeta(name='indev_3_x', variant='indev', version='git:cassandra-3.7', min_proto_v=3, max_proto_v=4, java_versions=(8,))
+indev_3_x = VersionMeta(name='indev_3_x', variant='indev', version='git:cassandra-3.6', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 current_3_x = VersionMeta(name='current_3_x', variant='current', version='3.5', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 next_3_x = VersionMeta(name='next_3_x', variant='next', version='git:3.6-tentative', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 
@@ -73,7 +73,9 @@ MANIFEST = {
 # 1) Add a VersionMeta for each version you wish to test (see examples below). Update the name, version, and protocol restrictions as needed. Use a unique name for each VersionMeta.
 # 2) Update OVERRIDE_MANIFEST (see example below).
 # 3) If using ccm local: slugs, make sure you have LOCAL_GIT_REPO defined in your env. This is the path to your git repo.
-# 4) Run the tests! To run all, use 'nosetests -v upgrade_tests/'. To run specific tests, use 'nosetests -vs --collect-only' to preview the test names, then run nosetests using the desired test name.
+# 4) Run the tests!
+#      export UPGRADE_TEST_RUN=true
+#      To run all, use 'nosetests -v upgrade_tests/'. To run specific tests, use 'nosetests -vs --collect-only' to preview the test names, then run nosetests using the desired test name.
 custom_1 = VersionMeta(name='custom_branch_1', variant='indev', version='local:some_branch', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_2 = VersionMeta(name='custom_branch_2', variant='indev', version='git:trunk', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_3 = VersionMeta(name='custom_branch_3', variant='indev', version='git:cassandra-3.5', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
