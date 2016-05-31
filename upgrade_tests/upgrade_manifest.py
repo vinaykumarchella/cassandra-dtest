@@ -48,10 +48,6 @@ head_trunk = VersionMeta(name='head_trunk', variant='indev', version='git:trunk'
 #   3) Nodes upgraded to version B can read data stored by the predecessor version A, and from a data standpoint will function the same as if they always ran version B.
 #   4) If a new sstable format is present in version B, writes will occur in that format after upgrade. Running sstableupgrade on version B will proactively convert version A sstables to version B.
 MANIFEST = {
-    indev_2_0_x: [indev_2_1_x, current_2_1_x, next_2_1_x],
-    current_2_0_x: [indev_2_0_x, indev_2_1_x, current_2_1_x, next_2_1_x],
-    next_2_0_x: [indev_2_1_x, current_2_1_x, next_2_1_x],
-
     indev_2_1_x: [indev_2_2_x, current_2_2_x, next_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
     current_2_1_x: [indev_2_1_x, indev_2_2_x, current_2_2_x, next_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
     next_2_1_x: [indev_2_2_x, current_2_2_x, next_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
@@ -64,8 +60,6 @@ MANIFEST = {
     current_3_0_x: [indev_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
     next_3_0_x: [indev_3_x, current_3_x, next_3_x, head_trunk],
 
-    indev_3_x: [head_trunk],
-    current_3_x: [indev_3_x, head_trunk],
     next_3_x: [head_trunk],
 }
 
