@@ -60,6 +60,8 @@ MANIFEST = {
     current_3_0_x: [indev_3_x, current_3_x, next_3_x, head_trunk],
     next_3_0_x: [indev_3_x, current_3_x, next_3_x, head_trunk],
 
+    indev_3_x: [head_trunk],
+    current_3_x: [indev_3_x, head_trunk],
     next_3_x: [head_trunk],
 }
 
