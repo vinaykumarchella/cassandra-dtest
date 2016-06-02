@@ -76,14 +76,12 @@ MANIFEST = {
 # 4) Run the tests!
 #      export UPGRADE_TEST_RUN=true
 #      To run all, use 'nosetests -v upgrade_tests/'. To run specific tests, use 'nosetests -vs --collect-only' to preview the test names, then run nosetests using the desired test name.
-custom_1 = VersionMeta(name='custom_branch_1', variant='indev', version='local:some_branch', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
+cassandra_11930 = VersionMeta(name='cassandra_11930', variant='indev', version='local:CASSANDRA-11930-3.0', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 custom_2 = VersionMeta(name='custom_branch_2', variant='indev', version='git:trunk', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_3 = VersionMeta(name='custom_branch_3', variant='indev', version='git:cassandra-3.5', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_4 = VersionMeta(name='custom_branch_4', variant='indev', version='git:cassandra-3.6', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 OVERRIDE_MANIFEST = {
-    # EXAMPLE:
-    # custom_1: [custom_2, custom_3],  # creates a test of custom_1 -> custom_2, and another test from custom_1 -> custom_3
-    # custom_3: [custom_4]             # creates a test of custom_3 -> custom_4
+    current_2_2_x: [cassandra_11930]
 }
 
 
