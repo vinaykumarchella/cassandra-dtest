@@ -793,57 +793,7 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
 
 MultiUpgrade = namedtuple('MultiUpgrade', ('name', 'version_metas', 'protocol_version', 'extra_config'))
 
-MULTI_UPGRADES = (
-    # Proto v1 upgrades (v1 supported on 2.0, 2.1, 2.2)
-    MultiUpgrade(name='ProtoV1Upgrade_AllVersions_EndsAt_indev_2_2_x',
-                 version_metas=[current_2_0_x, current_2_1_x, indev_2_2_x], protocol_version=1, extra_config=None),
-    MultiUpgrade(name='ProtoV1Upgrade_AllVersions_RandomPartitioner_EndsAt_indev_2_2_x',
-                 version_metas=[current_2_0_x, current_2_1_x, indev_2_2_x], protocol_version=1,
-                 extra_config=(
-                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
-                 )),
-    MultiUpgrade(name='ProtoV1Upgrade_AllVersions_EndsAt_next_2_2_x',
-                 version_metas=[current_2_0_x, current_2_1_x, next_2_2_x], protocol_version=1, extra_config=None),
-    MultiUpgrade(name='ProtoV1Upgrade_AllVersions_RandomPartitioner_EndsAt_indev_2_2_x',
-                 version_metas=[current_2_0_x, current_2_1_x, next_2_2_x], protocol_version=1,
-                 extra_config=(
-                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
-                 )),
-
-    # Proto v2 upgrades (v2 is supported on 2.0, 2.1, 2.2)
-    MultiUpgrade(name='ProtoV2Upgrade_AllVersions_EndsAt_indev_2_2_x',
-                 version_metas=[current_2_0_x, current_2_1_x, indev_2_2_x], protocol_version=2, extra_config=None),
-    MultiUpgrade(name='ProtoV2Upgrade_AllVersions_RandomPartitioner_EndsAt_indev_2_2_x',
-                 version_metas=[current_2_0_x, current_2_1_x, indev_2_2_x], protocol_version=2,
-                 extra_config=(
-                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
-                 )),
-    MultiUpgrade(name='ProtoV2Upgrade_AllVersions_EndsAt_next_2_2x',
-                 version_metas=[current_2_0_x, current_2_1_x, next_2_2_x], protocol_version=2, extra_config=None),
-    MultiUpgrade(name='ProtoV2Upgrade_AllVersions_RandomPartitioner_EndsAt_next_2_2_x',
-                 version_metas=[current_2_0_x, current_2_1_x, next_2_2_x], protocol_version=2,
-                 extra_config=(
-                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
-                 )),
-
-    # Proto v3 upgrades (v3 is supported on 2.1, 2.2, 3.0, 3.1, trunk)
-    MultiUpgrade(name='ProtoV3Upgrade_AllVersions_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_1_x, current_2_2_x, current_3_0_x, head_trunk], protocol_version=3, extra_config=None),
-    MultiUpgrade(name='ProtoV3Upgrade_AllVersions_RandomPartitioner_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_1_x, current_2_2_x, current_3_0_x, head_trunk], protocol_version=3,
-                 extra_config=(
-                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
-                 )),
-
-    # Proto v4 upgrades (v4 is supported on 2.2, 3.0, 3.1, trunk)
-    MultiUpgrade(name='ProtoV4Upgrade_AllVersions_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_2_x, current_3_0_x, head_trunk], protocol_version=4, extra_config=None),
-    MultiUpgrade(name='ProtoV4Upgrade_AllVersions_RandomPartitioner_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_2_x, current_3_0_x, head_trunk], protocol_version=4,
-                 extra_config=(
-                     ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
-                 )),
-)
+MULTI_UPGRADES = ()
 
 for upgrade in MULTI_UPGRADES:
     # if any version_metas are None, this means they are verions not to be tested currently
