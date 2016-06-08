@@ -9,7 +9,6 @@ from cassandra.protocol import SyntaxException
 from assertions import (assert_all, assert_invalid, assert_one,
                         assert_unauthorized)
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
-from tools import since
 
 
 class TestAuth(Tester):
