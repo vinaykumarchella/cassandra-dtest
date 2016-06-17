@@ -475,10 +475,11 @@ class TestCompaction(Tester):
         stress_write(node1, keycount=500000)
         node1.nodetool('flush keyspace1 standard1')
 
-        sstable_files = ' '.join(get_sstable_data_files(node1, 'keyspace1', 'standard1'))
+        sstable_files = get_sstable_data_files(node1, 'keyspace1', 'standard1')
         #sstable_files = ' '.join(node1.get_sstable_data_files('keyspace1', 'standard1'))
         debug('Compacting {}'.format(sstable_files))
-        node1.nodetool('compact --user-defined {}'.format(sstable_files))
+        for file in sstable_files:
+            node1.nodetool('compact --user-defined {}'.format(file))
 
         sstable_files = get_sstable_data_files(node1, 'keyspace1', 'standard1')
         #sstable_files = node1.get_sstable_data_files('keyspace1', 'standard1')
