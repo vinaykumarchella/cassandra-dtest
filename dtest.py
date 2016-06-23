@@ -92,11 +92,11 @@ logging.basicConfig(filename=os.path.join(LOG_SAVED_DIR, "dtest.log"),
                     filemode='w',
                     format='%(asctime)s,%(msecs)d %(name)s %(current_test)s %(levelname)s %(message)s',
                     datefmt='%H:%M:%S',
-                    level=logging.TRACE)
+                    level=logging.DEBUG)
 
 LOG = logging.getLogger('dtest')
 # set python-driver log level to WARN by default for dtest
-logging.getLogger('cassandra').setLevel(logging.TRACE)
+logging.getLogger('cassandra').setLevel(logging.DEBUG)
 
 # There are times when we want to know the C* version we're testing against
 # before we call Tester.setUp. In the general case, we can't know that -- the
