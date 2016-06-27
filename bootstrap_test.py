@@ -202,6 +202,7 @@ class TestBootstrap(Tester):
         """
 
         cluster = self.cluster
+        cluster.set_configuration_options(values={'stream_throughput_outbound_megabits_per_sec': 1})
         cluster.populate(2).start(wait_other_notice=True)
 
         node1 = cluster.nodes['node1']
@@ -214,13 +215,9 @@ class TestBootstrap(Tester):
 
         # start bootstrapping node3 and wait for streaming
         node3 = new_node(cluster)
-        node3.set_configuration_options(values={'stream_throughput_outbound_megabits_per_sec': 1})
         # keep timeout low so that test won't hang
         node3.set_configuration_options(values={'streaming_socket_timeout_in_ms': 1000})
-        try:
-            node3.start(wait_other_notice=False)
-        except NodeError:
-            pass  # node doesn't start as expected
+        node3.start(wait_other_notice=False, wait_for_binary_proto=True)
         t.join()
 
         # wait for node3 ready to query
