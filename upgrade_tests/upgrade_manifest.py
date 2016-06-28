@@ -32,7 +32,7 @@ next_2_2_x = None  # None if not yet tagged
 
 indev_3_0_x = VersionMeta(name='indev_3_0_x', variant='indev', version='git:cassandra-3.0', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 current_3_0_x = VersionMeta(name='current_3_0_x', variant='current', version='3.0.7', min_proto_v=3, max_proto_v=4, java_versions=(8,))
-next_3_0_x = None  # None if not yet tagged
+next_3_0_x = VersionMeta(name='next_3_0_x', variant='next', version='git:3.0.8-tentative', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 
 indev_3_x = VersionMeta(name='indev_3_x', variant='indev', version='git:cassandra-3.7', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 current_3_x = VersionMeta(name='current_3_x', variant='current', version='3.7', min_proto_v=3, max_proto_v=4, java_versions=(8,))
@@ -47,27 +47,7 @@ head_trunk = VersionMeta(name='head_trunk', variant='indev', version='git:trunk'
 #   2) Features exclusive to version B may not work until all nodes are running version B.
 #   3) Nodes upgraded to version B can read data stored by the predecessor version A, and from a data standpoint will function the same as if they always ran version B.
 #   4) If a new sstable format is present in version B, writes will occur in that format after upgrade. Running sstableupgrade on version B will proactively convert version A sstables to version B.
-MANIFEST = {
-    indev_2_0_x: [indev_2_1_x, current_2_1_x, next_2_1_x],
-    current_2_0_x: [indev_2_0_x, indev_2_1_x, current_2_1_x, next_2_1_x],
-    next_2_0_x: [indev_2_1_x, current_2_1_x, next_2_1_x],
-
-    indev_2_1_x: [indev_2_2_x, current_2_2_x, next_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
-    current_2_1_x: [indev_2_1_x, indev_2_2_x, current_2_2_x, next_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
-    next_2_1_x: [indev_2_2_x, current_2_2_x, next_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
-
-    indev_2_2_x: [indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
-    current_2_2_x: [indev_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
-    next_2_2_x: [indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
-
-    indev_3_0_x: [indev_3_x, current_3_x, next_3_x, head_trunk],
-    current_3_0_x: [indev_3_0_x, indev_3_x, current_3_x, next_3_x, head_trunk],
-    next_3_0_x: [indev_3_x, current_3_x, next_3_x, head_trunk],
-
-    indev_3_x: [head_trunk],
-    current_3_x: [indev_3_x, head_trunk],
-    next_3_x: [head_trunk],
-}
+MANIFEST = {}
 
 # Local env and custom path testing instructions. Use these steps to REPLACE the normal upgrade test cases with your own.
 # 1) Add a VersionMeta for each version you wish to test (see examples below). Update the name, version, and protocol restrictions as needed. Use a unique name for each VersionMeta.
@@ -81,9 +61,9 @@ custom_2 = VersionMeta(name='custom_branch_2', variant='indev', version='git:tru
 custom_3 = VersionMeta(name='custom_branch_3', variant='indev', version='git:cassandra-3.5', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_4 = VersionMeta(name='custom_branch_4', variant='indev', version='git:cassandra-3.6', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 OVERRIDE_MANIFEST = {
-    # EXAMPLE:
-    # custom_1: [custom_2, custom_3],  # creates a test of custom_1 -> custom_2, and another test from custom_1 -> custom_3
-    # custom_3: [custom_4]             # creates a test of custom_3 -> custom_4
+    current_2_1_x: [next_3_0_x],
+    current_2_2_x: [next_3_0_x],
+    next_3_0_x: [current_3_x, head_trunk],
 }
 
 
