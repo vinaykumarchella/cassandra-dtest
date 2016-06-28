@@ -61,9 +61,7 @@ custom_2 = VersionMeta(name='custom_branch_2', variant='indev', version='git:tru
 custom_3 = VersionMeta(name='custom_branch_3', variant='indev', version='git:cassandra-3.5', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_4 = VersionMeta(name='custom_branch_4', variant='indev', version='git:cassandra-3.6', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 OVERRIDE_MANIFEST = {
-    indev_2_1_x: [next_2_2_x],
     current_2_1_x: [next_2_2_x],
-    next_2_1_x: [next_2_2_x],
     next_2_2_x: [current_3_0_x, current_3_x, head_trunk],
 }
 
