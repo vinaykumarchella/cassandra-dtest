@@ -5,7 +5,6 @@ import os
 import time
 from itertools import izip as zip
 import shutil
-import uuid
 
 from cassandra import WriteFailure
 from cassandra.concurrent import (execute_concurrent,
@@ -24,6 +23,29 @@ _16_uuid_column_spec = (
     'h uuid, i uuid, j uuid, k uuid, l uuid, m uuid, n uuid, o uuid, '
     'p uuid'
 )
+
+
+def _delete_all_rows_and_assert_empty(node, session, table_info):
+    results = session.execute('SELECT * FROM ' + table_info.name)
+    key_name = results.column_names[0]
+
+    # assumes first column is primary key
+    keys = list(row[0] for row in results)
+
+    debug('deleting {n} rows from {name}'.format(n=len(keys), name=table_info.name))
+    for key in keys:
+        session.execute('DELETE FROM ' + table_info.name + ' WHERE ' + key_name + ' = ' + str(key))
+
+    debug('flushing after mass DELETE')
+    # node.flush()
+
+    compaction_cmd = 'compact ' + table_info.ks_name + ' ' + table_info.table_name
+    debug('executing `nodetool ' + compaction_cmd + '` and blocking on compactions')
+    node.nodetool(compaction_cmd)
+    node.wait_for_compactions()
+
+    debug('checking data successfully deleted')
+    assert_none(session, 'SELECT * FROM ' + table_info.name)
 
 
 def _move_contents(source_dir, dest_dir, verbose=True):
@@ -438,8 +460,7 @@ class TestCDC(Tester):
             ks_name=ks_name, table_name='cdc_tab',
             column_spec=_16_uuid_column_spec,
             insert_stmt=_get_16_uuid_insert_stmt(ks_name, 'cdc_tab'),
-            options={'cdc': 'true',
-                     'id': uuid.uuid4()}
+            options={'cdc': 'true'}
         )
         session.execute(cdc_table_info.create_stmt)
 
@@ -447,7 +468,6 @@ class TestCDC(Tester):
             ks_name=ks_name, table_name='non_cdc_tab',
             column_spec=_16_uuid_column_spec,
             insert_stmt=_get_16_uuid_insert_stmt(ks_name, 'non_cdc_tab'),
-            options={'id': uuid.uuid4()}
         )
         session.execute(non_cdc_table_info.create_stmt)
 
@@ -468,17 +488,12 @@ class TestCDC(Tester):
 
         # Save cdc_raw files off to temporary directory
         node.flush()
-        raw_dir = os.path.join(node.get_path(), 'cdc_raw')
-        _move_contents(raw_dir, saved_cdc_raw_contents_dir_name)
+        _move_contents(os.path.join(node.get_path(), 'cdc_raw'), saved_cdc_raw_contents_dir_name)
 
         # Start clean so we can "import" commitlog files
-        debug('dropping and recreating tables')
-        session.execute('DROP TABLE ' + ks_name + '.' + cdc_table_info.table_name)
-        session.execute('DROP TABLE ' + non_cdc_table_info.name)
-        session.execute(cdc_table_info.create_stmt)
-        session.execute(non_cdc_table_info.create_stmt)
-        assert_none(session, 'SELECT * FROM ' + cdc_table_info.name)
-        assert_none(session, 'SELECT * FROM ' + non_cdc_table_info.name)
+        debug('deleting all data from tables')
+        _delete_all_rows_and_assert_empty(node, session, cdc_table_info)
+        _delete_all_rows_and_assert_empty(node, session, non_cdc_table_info)
 
         # "Import" commitlog files by stopping the node...
         node.stop()
