@@ -41,17 +41,11 @@ class TestBootstrap(Tester):
 
     def _base_bootstrap_test(self, bootstrap):
         cluster = self.cluster
-        tokens = cluster.balanced_tokens(2)
-        cluster.set_configuration_options(values={'num_tokens': 1})
-
-        debug("[node1, node2] tokens: %r" % (tokens,))
-
         keys = 10000
 
         # Create a single node cluster
         cluster.populate(1)
         node1 = cluster.nodelist()[0]
-        node1.set_configuration_options(values={'initial_token': tokens[0]})
         cluster.start(wait_other_notice=True)
 
         session = self.patient_cql_connection(node1)
@@ -75,7 +69,7 @@ class TestBootstrap(Tester):
         reader = self.go(lambda _: query_c1c2(session, random.randint(0, keys - 1), ConsistencyLevel.ONE))
 
         # Bootstrapping a new node
-        node2 = bootstrap(cluster, tokens[1])
+        node2 = bootstrap(cluster)
         node2.compact()
 
         reader.check()
@@ -95,21 +89,17 @@ class TestBootstrap(Tester):
 
         self.check_bootstrap_state(node2, 'COMPLETED')
 
-    @no_vnodes()
     def simple_bootstrap_test(self):
-        def bootstrap(cluster, token):
+        def bootstrap(cluster):
             node2 = new_node(cluster)
-            node2.set_configuration_options(values={'initial_token': token})
             node2.start(wait_for_binary_proto=True)
             return node2
 
         self._base_bootstrap_test(bootstrap)
 
-    @no_vnodes()
     def bootstrap_on_write_survey_test(self):
-        def bootstrap_on_write_survey_and_join(cluster, token):
+        def bootstrap_on_write_survey_and_join(cluster):
             node2 = new_node(cluster)
-            node2.set_configuration_options(values={'initial_token': token})
             node2.start(jvm_args=["-Dcassandra.write_survey=true"], wait_for_binary_proto=True)
 
             self.assertTrue(len(node2.grep_log('Startup complete, but write survey mode is active, not becoming an active ring member.')))
