@@ -4,6 +4,7 @@ from collections import namedtuple
 import os
 import time
 from itertools import izip as zip
+from itertools import repeat
 import shutil
 import uuid
 
@@ -25,6 +26,16 @@ _16_uuid_column_spec = (
     'p uuid'
 )
 
+
+def _insert_rows(session, table_name, insert_stmt, values):
+    prepared_insert = session.prepare(insert_stmt)
+    execute_concurrent(session, ((prepared_insert, x) for x in values),
+                       concurrency=500, raise_on_first_error=True)
+
+    data_loaded = rows_to_list(session.execute('SELECT * FROM ' + table_name))
+    debug('{n} rows inserted into {table_name}'.format(n=len(data_loaded), table_name=table_name))
+    assert_equal(10000, len(data_loaded))
+    return data_loaded
 
 def _move_contents(source_dir, dest_dir, verbose=True):
     for source_filename in os.listdir(source_dir):
@@ -422,37 +433,7 @@ class TestCDC(Tester):
         node.flush()
         self.assertEqual(pre_non_cdc_write_cdc_raw_segments, _get_cdc_raw_files(node.get_path()))
 
-    def test_cdc_data_available_in_cdc_raw(self):
-        ks_name = 'ks'
-        # First, create a new node just for data generation.
-        generation_node, generation_session = self.prepare(ks_name=ks_name)
-
-        cdc_table_info = TableInfo(
-            ks_name=ks_name, table_name='cdc_tab',
-            column_spec=_16_uuid_column_spec,
-            insert_stmt=_get_16_uuid_insert_stmt(ks_name, 'cdc_tab'),
-            options={'cdc': 'true', 'id': uuid.uuid4()}
-        )
-        generation_session.execute(cdc_table_info.create_stmt)
-
-        # insert 10000 rows
-        cdc_prepared_insert = generation_session.prepare(cdc_table_info.insert_stmt)
-        execute_concurrent(generation_session, ((cdc_prepared_insert, ()) for _ in range(10000)),
-                           concurrency=500, raise_on_first_error=True)
-
-        data_in_cdc_table_before_restart = rows_to_list(generation_session.execute('SELECT * FROM ' + cdc_table_info.name))
-        debug('{} rows in CDC table'.format(len(data_in_cdc_table_before_restart)))
-        self.assertEqual(10000, len(data_in_cdc_table_before_restart))
-
-        # drain the node to guarantee all cl segements will be recycled
-        debug('draining')
-        generation_node.drain()
-        debug('stopping')
-        # stop the node and clean up all sessions attached to it
-        generation_node.stop()
-        generation_session.cluster.shutdown()
-
-        # create a new node to use for cdc_raw cl segment replay
+    def _init_new_loading_node(self, ks_name, create_stmt):
         loading_node = Node(
             name='node2',
             cluster=self.cluster,
@@ -472,9 +453,38 @@ class TestCDC(Tester):
         loading_session = self.patient_exclusive_cql_connection(loading_node)
         self.create_ks(loading_session, ks_name, rf=1)
         debug('creating new table')
-        loading_session.execute(cdc_table_info.create_stmt)
+        loading_session.execute(create_stmt)
         debug('stopping new node')
         loading_node.stop()
+        loading_session.cluster.shutdown()
+        return loading_node
+
+    def test_cdc_data_available_in_cdc_raw(self):
+        ks_name = 'ks'
+        # First, create a new node just for data generation.
+        generation_node, generation_session = self.prepare(ks_name=ks_name)
+
+        cdc_table_info = TableInfo(
+            ks_name=ks_name, table_name='cdc_tab',
+            column_spec=_16_uuid_column_spec,
+            insert_stmt=_get_16_uuid_insert_stmt(ks_name, 'cdc_tab'),
+            options={'cdc': 'true', 'id': uuid.uuid4()}
+        )
+        generation_session.execute(cdc_table_info.create_stmt)
+
+        # insert 10000 rows
+        inserted_rows = _insert_rows(generation_session, cdc_table_info.name, cdc_table_info.insert_stmt, repeat((), 10000))
+
+        # drain the node to guarantee all cl segements will be recycled
+        debug('draining')
+        generation_node.drain()
+        debug('stopping')
+        # stop the node and clean up all sessions attached to it
+        generation_node.stop()
+        generation_session.cluster.shutdown()
+
+        # create a new node to use for cdc_raw cl segment replay
+        loading_node = self._init_new_loading_node(ks_name, cdc_table_info.create_stmt)
 
         # move cdc_raw contents to commitlog directories, then start the
         # node again to trigger commitlog replay, which should replay the
@@ -501,7 +511,7 @@ class TestCDC(Tester):
         # All data that was in CDC tables should have been copied to cdc_raw,
         # then used in commitlog replay, so it should be back in the cluster.
         self.assertEqual(
-            data_in_cdc_table_before_restart,
+            inserted_rows,
             data_in_cdc_table_after_restart,
             # The message on failure is too long, since cdc_data is thousands
             # of items, so we print something else here
