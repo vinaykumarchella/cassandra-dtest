@@ -62,7 +62,7 @@ class BaseRepairTest(Tester):
                 stopped_nodes.append(node)
                 node.stop(wait_other_notice=True)
 
-        session = self.patient_cql_connection(node_to_check, 'ks')
+        session = self.patient_exclusive_cql_connection(node_to_check, 'ks')
         result = list(session.execute("SELECT * FROM cf LIMIT {}".format(rows * 2)))
         self.assertEqual(len(result), rows)
 

@@ -23,8 +23,8 @@ class TestUpgradeRepair(BaseRepairTest):
         """
         default_install_dir = self.cluster.get_install_dir()
         cluster = self.cluster
-        debug("Setting version to 2.2.4")
-        cluster.set_install_dir(version="2.2.4")
+        debug("Setting version to 2.2.5")
+        cluster.set_install_dir(version="2.2.5")
         self._populate_cluster()
 
         self._do_upgrade(default_install_dir)
