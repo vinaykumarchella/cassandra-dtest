@@ -424,12 +424,8 @@ class TestCDC(Tester):
 
     def test_cdc_data_available_in_cdc_raw(self):
         ks_name = 'ks'
-        # TODO: is this necessary?
-        configuration_overrides = {
-            # Make CDC space as small as possible so we can fill it quickly.
-            'cdc_total_space_in_mb': 16,
-        }
-        generation_node, generation_session = self.prepare(ks_name=ks_name, configuration_overrides=configuration_overrides)
+        # First, create a new node just for data generation.
+        generation_node, generation_session = self.prepare(ks_name=ks_name)
 
         cdc_table_info = TableInfo(
             ks_name=ks_name, table_name='cdc_tab',
@@ -439,6 +435,7 @@ class TestCDC(Tester):
         )
         generation_session.execute(cdc_table_info.create_stmt)
 
+        # insert 10000 rows
         cdc_prepared_insert = generation_session.prepare(cdc_table_info.insert_stmt)
         execute_concurrent(generation_session, ((cdc_prepared_insert, ()) for _ in range(10000)),
                            concurrency=500, raise_on_first_error=True)
@@ -447,15 +444,17 @@ class TestCDC(Tester):
         debug('{} rows in CDC table'.format(len(data_in_cdc_table_before_restart)))
         self.assertEqual(10000, len(data_in_cdc_table_before_restart))
 
+        # drain the node to guarantee all cl segements will be recycled
         debug('draining')
         generation_node.drain()
         debug('stopping')
+        # stop the node and clean up all sessions attached to it
         generation_node.stop()
-        # self.cluster.remove(generation_node)
         generation_session.cluster.shutdown()
 
+        # create a new node to use for cdc_raw cl segment replay
         loading_node = Node(
-            name='node4',
+            name='node2',
             cluster=self.cluster,
             auto_bootstrap=False,
             thrift_interface=('127.0.0.2', 9160),
@@ -476,10 +475,10 @@ class TestCDC(Tester):
         loading_session.execute(cdc_table_info.create_stmt)
         debug('stopping new node')
         loading_node.stop()
-        # moving the saved cdc_raw contents to commitlog directories,
-        # then starting the node again to trigger commitlog replay, which
-        # should replay the cdc_raw files we moved to commitlogs into
-        # memtables.
+
+        # move cdc_raw contents to commitlog directories, then start the
+        # node again to trigger commitlog replay, which should replay the
+        # cdc_raw files we moved to commitlogs into memtables.
         debug('moving cdc_raw and restarting node')
         _move_contents(
             os.path.join(generation_node.get_path(), 'cdc_raw'),
@@ -490,8 +489,7 @@ class TestCDC(Tester):
         loading_node.grep_log('Log replay complete')
         debug('log replay complete')
 
-        # Now for final assertions. First, lets get the data that's been loaded by the
-        # replay maneuver above and print some statistics about it:
+        # final assertions
         validation_session = self.patient_exclusive_cql_connection(loading_node)
         data_in_cdc_table_after_restart = rows_to_list(
             validation_session.execute('SELECT * FROM ' + cdc_table_info.name)
