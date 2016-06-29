@@ -5,13 +5,14 @@ import os
 import time
 from itertools import izip as zip
 import shutil
+import uuid
 
 from cassandra import WriteFailure
 from cassandra.concurrent import (execute_concurrent,
                                   execute_concurrent_with_args)
+from ccmlib.node import Node
 from nose.tools import assert_equal, assert_less_equal
 
-from assertions import assert_none
 from dtest import Tester, debug
 from tools import rows_to_list, since
 from utils.fileutils import size_of_files_in_dir
@@ -23,29 +24,6 @@ _16_uuid_column_spec = (
     'h uuid, i uuid, j uuid, k uuid, l uuid, m uuid, n uuid, o uuid, '
     'p uuid'
 )
-
-
-def _delete_all_rows_and_assert_empty(node, session, table_info):
-    results = session.execute('SELECT * FROM ' + table_info.name)
-    key_name = results.column_names[0]
-
-    # assumes first column is primary key
-    keys = list(row[0] for row in results)
-
-    debug('deleting {n} rows from {name}'.format(n=len(keys), name=table_info.name))
-    for key in keys:
-        session.execute('DELETE FROM ' + table_info.name + ' WHERE ' + key_name + ' = ' + str(key))
-
-    debug('flushing after mass DELETE')
-    node.flush()
-
-    compaction_cmd = 'compact ' + table_info.ks_name + ' ' + table_info.table_name
-    debug('executing `nodetool ' + compaction_cmd + '` and blocking on compactions')
-    node.nodetool(compaction_cmd)
-    node.wait_for_compactions()
-
-    debug('checking data successfully deleted')
-    assert_none(session, 'SELECT * FROM ' + table_info.name)
 
 
 def _move_contents(source_dir, dest_dir, verbose=True):
@@ -139,6 +117,7 @@ TableInfoNamedtuple = namedtuple('TableInfoNamedtuple', [
     # derived
     'name', 'create_stmt'
 ])
+
 class TableInfo(TableInfoNamedtuple):
     __slots__ = ()
 
@@ -445,59 +424,77 @@ class TestCDC(Tester):
 
     def test_cdc_data_available_in_cdc_raw(self):
         ks_name = 'ks'
+        # TODO: is this necessary?
         configuration_overrides = {
             # Make CDC space as small as possible so we can fill it quickly.
             'cdc_total_space_in_mb': 16,
         }
-        node, session = self.prepare(ks_name=ks_name, configuration_overrides=configuration_overrides)
+        generation_node, generation_session = self.prepare(ks_name=ks_name, configuration_overrides=configuration_overrides)
 
         cdc_table_info = TableInfo(
             ks_name=ks_name, table_name='cdc_tab',
             column_spec=_16_uuid_column_spec,
             insert_stmt=_get_16_uuid_insert_stmt(ks_name, 'cdc_tab'),
-            options={'cdc': 'true'}
+            options={'cdc': 'true', 'id': uuid.uuid4()}
         )
-        session.execute(cdc_table_info.create_stmt)
+        generation_session.execute(cdc_table_info.create_stmt)
 
-        cdc_prepared_insert = session.prepare(cdc_table_info.insert_stmt)
-        execute_concurrent(session, ((cdc_prepared_insert, ()) for _ in range(10000)),
+        cdc_prepared_insert = generation_session.prepare(cdc_table_info.insert_stmt)
+        execute_concurrent(generation_session, ((cdc_prepared_insert, ()) for _ in range(10000)),
                            concurrency=500, raise_on_first_error=True)
 
-        data_in_cdc_table_before_restart = rows_to_list(session.execute('SELECT * FROM ' + cdc_table_info.name))
+        data_in_cdc_table_before_restart = rows_to_list(generation_session.execute('SELECT * FROM ' + cdc_table_info.name))
         debug('{} rows in CDC table'.format(len(data_in_cdc_table_before_restart)))
         self.assertEqual(10000, len(data_in_cdc_table_before_restart))
 
-        # Create a temporary directory for saving off cdc_raw segments
-        saved_cdc_raw_contents_dir_name = os.path.join(os.getcwd(), '.saved_cdc_raw')
-        self._create_temp_dir(saved_cdc_raw_contents_dir_name)
+        debug('draining')
+        generation_node.drain()
+        debug('stopping')
+        generation_node.stop()
+        # self.cluster.remove(generation_node)
+        generation_session.cluster.shutdown()
 
-        # Save cdc_raw files off to temporary directory
-        node.flush()
-        _move_contents(os.path.join(node.get_path(), 'cdc_raw'), saved_cdc_raw_contents_dir_name)
-
-        # Start clean so we can "import" commitlog files
-        debug('deleting all data from tables')
-        _delete_all_rows_and_assert_empty(node, session, cdc_table_info)
-
-        # "Import" commitlog files by stopping the node...
-        node.stop()
+        loading_node = Node(
+            name='node4',
+            cluster=self.cluster,
+            auto_bootstrap=False,
+            thrift_interface=('127.0.0.2', 9160),
+            storage_interface=('127.0.0.2', 7000),
+            jmx_port='7400',
+            remote_debug_port='0',
+            initial_token=None,
+            binary_interface=('127.0.0.2', 9042)
+        )
+        debug('adding node')
+        self.cluster.add(loading_node, is_seed=True)
+        debug('starting new node')
+        loading_node.start(wait_for_binary_proto=True)
+        debug('recreating ks and table')
+        loading_session = self.patient_exclusive_cql_connection(loading_node)
+        self.create_ks(loading_session, ks_name, rf=1)
+        debug('creating new table')
+        loading_session.execute(cdc_table_info.create_stmt)
+        debug('stopping new node')
+        loading_node.stop()
         # moving the saved cdc_raw contents to commitlog directories,
-        for commitlog_file in _get_commitlog_files(node.get_path()):
-            os.remove(commitlog_file)
-        _move_contents(saved_cdc_raw_contents_dir_name, os.path.join(node.get_path(), 'commitlogs'))
         # then starting the node again to trigger commitlog replay, which
         # should replay the cdc_raw files we moved to commitlogs into
         # memtables.
-        node.start(wait_for_binary_proto=True)
+        debug('moving cdc_raw and restarting node')
+        _move_contents(
+            os.path.join(generation_node.get_path(), 'cdc_raw'),
+            os.path.join(loading_node.get_path(), 'commitlogs')
+        )
+        loading_node.start(wait_for_binary_proto=True)
         debug('node successfully started; waiting on log replay')
-        node.grep_log("Log replay complete")
+        loading_node.grep_log('Log replay complete')
         debug('log replay complete')
 
         # Now for final assertions. First, lets get the data that's been loaded by the
         # replay maneuver above and print some statistics about it:
-        session = self.patient_cql_connection(node)
+        validation_session = self.patient_exclusive_cql_connection(loading_node)
         data_in_cdc_table_after_restart = rows_to_list(
-            session.execute('SELECT * FROM ' + cdc_table_info.name)
+            validation_session.execute('SELECT * FROM ' + cdc_table_info.name)
         )
         debug('found {cdc} values in CDC table'.format(
             cdc=len(data_in_cdc_table_after_restart)
