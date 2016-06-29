@@ -389,11 +389,6 @@ class TestCDC(Tester):
         commitlog_dir = os.path.join(node.get_path(), 'commitlogs')
         commitlogs_size = size_of_files_in_dir(commitlog_dir)
         debug('Commitlog dir ({d}) is {b}B'.format(d=commitlog_dir, b=commitlogs_size))
-        # This is a weak assertion -- there can be all kinds of, e.g., system
-        # data in the commitlogs, so this doesn't necessarily mean there's 1MB
-        # of data in CDC commitlogs. However, if there's less, we have a
-        # problem.
-        self.assertGreaterEqual(commitlogs_size, 1024 ** 2)
 
         # We should get a WriteFailure when trying to write to the CDC table
         # that's filled the designated CDC space...
