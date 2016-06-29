@@ -41,6 +41,7 @@ def _insert_rows(session, table_name, insert_stmt, values):
     assert_equal(len(values), len(data_loaded))
     return data_loaded
 
+
 def _move_contents(source_dir, dest_dir, verbose=True):
     for source_filename in os.listdir(source_dir):
         source_path, dest_path = (os.path.join(source_dir, source_filename),
@@ -124,7 +125,7 @@ def _write_to_cdc_WriteFailure(session, insert_stmt):
     return rows_loaded
 
 
-TableInfoNamedtuple = namedtuple('TableInfoNamedtuple', [
+_TableInfoNamedtuple = namedtuple('TableInfoNamedtuple', [
     # required
     'ks_name', 'table_name', 'column_spec',
     # optional
@@ -133,7 +134,8 @@ TableInfoNamedtuple = namedtuple('TableInfoNamedtuple', [
     'name', 'create_stmt'
 ])
 
-class TableInfo(TableInfoNamedtuple):
+
+class TableInfo(_TableInfoNamedtuple):
     __slots__ = ()
 
     def __new__(cls, ks_name, table_name, column_spec, options=None, insert_stmt=None):
