@@ -468,7 +468,12 @@ class TestCDC(Tester):
             ks_name=ks_name, table_name='cdc_tab',
             column_spec=_16_uuid_column_spec,
             insert_stmt=_get_16_uuid_insert_stmt(ks_name, 'cdc_tab'),
-            options={'cdc': 'true', 'id': uuid.uuid4()}
+            options={
+                'cdc': 'true',
+                # give table an explicit id so when we create it again it's the
+                # same table and we can replay into it
+                'id': uuid.uuid4()
+            }
         )
         generation_session.execute(cdc_table_info.create_stmt)
 
