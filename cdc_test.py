@@ -464,18 +464,8 @@ class TestCDC(Tester):
         )
         session.execute(cdc_table_info.create_stmt)
 
-        non_cdc_table_info = TableInfo(
-            ks_name=ks_name, table_name='non_cdc_tab',
-            column_spec=_16_uuid_column_spec,
-            insert_stmt=_get_16_uuid_insert_stmt(ks_name, 'non_cdc_tab'),
-        )
-        session.execute(non_cdc_table_info.create_stmt)
-
         cdc_prepared_insert = session.prepare(cdc_table_info.insert_stmt)
         execute_concurrent(session, ((cdc_prepared_insert, ()) for _ in range(10000)),
-                           concurrency=500, raise_on_first_error=True)
-        non_cdc_prepared_insert = session.prepare(non_cdc_table_info.insert_stmt)
-        execute_concurrent(session, ((non_cdc_prepared_insert, ()) for _ in range(10000)),
                            concurrency=500, raise_on_first_error=True)
 
         data_in_cdc_table_before_restart = rows_to_list(session.execute('SELECT * FROM ' + cdc_table_info.name))
@@ -493,7 +483,6 @@ class TestCDC(Tester):
         # Start clean so we can "import" commitlog files
         debug('deleting all data from tables')
         _delete_all_rows_and_assert_empty(node, session, cdc_table_info)
-        _delete_all_rows_and_assert_empty(node, session, non_cdc_table_info)
 
         # "Import" commitlog files by stopping the node...
         node.stop()
@@ -515,12 +504,9 @@ class TestCDC(Tester):
         data_in_cdc_table_after_restart = rows_to_list(
             session.execute('SELECT * FROM ' + cdc_table_info.name)
         )
-        data_in_non_cdc_table_after_restart = rows_to_list(
-            session.execute('SELECT * FROM ' + non_cdc_table_info.name)
-        )
-        debug('found {cdc} values in CDC table and {noncdc} values in non-CDC '
-              'table'.format(cdc=len(data_in_cdc_table_after_restart),
-                             noncdc=len(data_in_non_cdc_table_after_restart)))
+        debug('found {cdc} values in CDC table'.format(
+            cdc=len(data_in_cdc_table_after_restart)
+        ))
         # Then we assert that the CDC data that we expect to be there is there.
         # All data that was in CDC tables should have been copied to cdc_raw,
         # then used in commitlog replay, so it should be back in the cluster.
