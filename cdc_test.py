@@ -97,7 +97,7 @@ def _write_to_cdc_WriteFailure(session, insert_stmt):
             session,
             ((prepared, ()) for _ in range(1000)),
             concurrency=500,
-            # Don't propogate errors to the main thread. We expect at least
+            # Don't propagate errors to the main thread. We expect at least
             # one WriteFailure, so we handle it below as part of the
             # results recieved from this method.
             raise_on_first_error=False
