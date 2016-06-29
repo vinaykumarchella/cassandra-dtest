@@ -29,12 +29,15 @@ _16_uuid_column_spec = (
 
 def _insert_rows(session, table_name, insert_stmt, values):
     prepared_insert = session.prepare(insert_stmt)
+    values = list(values)  # in case values is a generator
     execute_concurrent(session, ((prepared_insert, x) for x in values),
                        concurrency=500, raise_on_first_error=True)
 
     data_loaded = rows_to_list(session.execute('SELECT * FROM ' + table_name))
     debug('{n} rows inserted into {table_name}'.format(n=len(data_loaded), table_name=table_name))
-    assert_equal(10000, len(data_loaded))
+    # use assert_equal over assert_length_equal to avoid printing out
+    # potentially large lists
+    assert_equal(len(values), len(data_loaded))
     return data_loaded
 
 def _move_contents(source_dir, dest_dir, verbose=True):
