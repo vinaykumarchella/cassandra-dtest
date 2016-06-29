@@ -37,7 +37,7 @@ def _delete_all_rows_and_assert_empty(node, session, table_info):
         session.execute('DELETE FROM ' + table_info.name + ' WHERE ' + key_name + ' = ' + str(key))
 
     debug('flushing after mass DELETE')
-    # node.flush()
+    node.flush()
 
     compaction_cmd = 'compact ' + table_info.ks_name + ' ' + table_info.table_name
     debug('executing `nodetool ' + compaction_cmd + '` and blocking on compactions')
