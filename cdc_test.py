@@ -1,6 +1,7 @@
 from __future__ import division
 
 from collections import namedtuple
+import errno
 import os
 import time
 from itertools import izip as zip
@@ -212,7 +213,7 @@ class TestCDC(Tester):
         try:
             os.mkdir(dir_name)
         except OSError as e:
-            if 'File exists' in e:
+            if e.errno != errno.EEXIST:
                 debug(dir_name + ' already exists. removing and recreating.')
                 shutil.rmtree(dir_name)
                 os.mkdir(dir_name)
