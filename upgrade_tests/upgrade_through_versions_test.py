@@ -118,7 +118,7 @@ def data_checker(tester, to_verify_queue, verification_done_queue):
                 # rewrite rows in the same sequence as originally written
                 pass
 
-        tester.assertEqual(expected_val, actual_val, "Data did not match expected value!")
+        tester.assertEqual(expected_val, actual_val)
 
 
 def counter_incrementer(tester, to_verify_queue, verification_done_queue, rewrite_probability=0):
@@ -207,7 +207,7 @@ def counter_checker(tester, to_verify_queue, verification_done_queue):
             verification_done_queue.close()
             raise
         else:
-            tester.assertEqual(expected_count, actual_count, "Data did not match expected value!")
+            tester.assertEqual(expected_count, actual_count)
 
             try:
                 verification_done_queue.put_nowait((key, actual_count))
