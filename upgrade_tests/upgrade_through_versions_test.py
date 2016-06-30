@@ -358,10 +358,13 @@ class UpgradeTester(Tester):
             # Stop write processes
             write_proc.terminate()
             increment_proc.terminate()
-            # wait for the verification queue's to empty (and check all rows) before continuing
-            self._wait_until_queue_condition('writes pending verification', verification_queue, operator.le, 0, max_wait_s=1200)
-            self._wait_until_queue_condition('counters pending verification', incr_verify_queue, operator.le, 0, max_wait_s=1200)
+
             self._check_on_subprocs([verify_proc, incr_verify_proc])  # make sure the verification processes are running still
+
+            # wait for the verification queue's to empty (and check all rows) before continuing
+            self._wait_until_queue_condition('writes pending verification', verification_queue, verify_proc, operator.le, 0, max_wait_s=1200)
+            self._wait_until_queue_condition('counters pending verification', incr_verify_queue, incr_verify_proc, operator.le, 0, max_wait_s=1200)
+            self._check_on_subprocs([verify_proc, incr_verify_proc])  # final check that there was no abnormal exit in verification subprocesses
 
             self._terminate_subprocs()
         # not a rolling upgrade, do everything in parallel:
@@ -517,11 +520,13 @@ class UpgradeTester(Tester):
                 self.assertEqual(x, k)
                 self.assertEqual(str(x), v)
 
-    def _wait_until_queue_condition(self, label, queue, opfunc, required_len, max_wait_s=600):
+    def _wait_until_queue_condition(self, label, queue, responsible_process, opfunc, required_len, max_wait_s=600):
         """
         Waits up to max_wait_s for queue size to return True when evaluated against a condition function from the operator module.
 
         Label is just a string identifier for easier debugging.
+
+        responsible_process is the process that is working on the queue (adding or subtracting).
 
         On Mac OS X may not be able to check queue size, in which case it will not block.
 
@@ -538,6 +543,8 @@ class UpgradeTester(Tester):
             if opfunc(qsize, required_len):
                 debug("{} queue size ({}) is '{}' to {}. Continuing.".format(label, qsize, opfunc.__name__, required_len))
                 break
+            if not responsible_process.is_alive():
+                raise RuntimeError("The process responsible for {} is not alive, condition won't ever be met!".format(label))
 
             if divmod(round(time.time()), 30)[1] == 0:
                 debug("{} queue size is at {}, target is to reach '{}' {}".format(label, qsize, opfunc.__name__, required_len))
@@ -569,7 +576,7 @@ class UpgradeTester(Tester):
         writer.start()
 
         if wait_for_rowcount > 0:
-            self._wait_until_queue_condition('rows written (but not verified)', to_verify_queue, operator.ge, wait_for_rowcount, max_wait_s=max_wait_s)
+            self._wait_until_queue_condition('rows written (but not verified)', to_verify_queue, writer, operator.ge, wait_for_rowcount, max_wait_s=max_wait_s)
 
         verifier = Process(target=data_checker, args=(self, to_verify_queue, verification_done_queue))
         # daemon subprocesses are killed automagically when the parent process exits
@@ -598,7 +605,7 @@ class UpgradeTester(Tester):
         incrementer.start()
 
         if wait_for_rowcount > 0:
-            self._wait_until_queue_condition('counters incremented (but not verified)', to_verify_queue, operator.ge, wait_for_rowcount, max_wait_s=max_wait_s)
+            self._wait_until_queue_condition('counters incremented (but not verified)', to_verify_queue, incrementer, operator.ge, wait_for_rowcount, max_wait_s=max_wait_s)
 
         count_verifier = Process(target=counter_checker, args=(self, to_verify_queue, verification_done_queue))
         # daemon subprocesses are killed automagically when the parent process exits
