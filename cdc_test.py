@@ -1,13 +1,13 @@
 from __future__ import division
 
-from collections import namedtuple
 import errno
 import os
+import shutil
 import time
+import uuid
+from collections import namedtuple
 from itertools import izip as zip
 from itertools import repeat
-import shutil
-import uuid
 
 from cassandra import WriteFailure
 from cassandra.concurrent import (execute_concurrent,
@@ -19,7 +19,6 @@ from dtest import Tester, debug
 from tools import rows_to_list, since
 from utils.fileutils import size_of_files_in_dir
 from utils.funcutils import get_rate_limited_function
-
 
 _16_uuid_column_spec = (
     'a uuid PRIMARY KEY, b uuid, c uuid, d uuid, e uuid, f uuid, g uuid, '
