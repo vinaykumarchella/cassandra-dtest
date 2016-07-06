@@ -4,6 +4,7 @@ import time
 from abc import ABCMeta
 from unittest import skipIf
 
+from cassandra import ConsistencyLevel
 from ccmlib.common import get_version_from_build, is_win
 
 from dtest import DEBUG, Tester, debug
@@ -43,6 +44,7 @@ class UpgradeTester(Tester):
     # make this an abc so we can get all subclasses with __subclasses__()
     __metaclass__ = ABCMeta
     NODES, RF, __test__, CL, UPGRADE_PATH = 2, 1, False, None, None
+    MIN_NODES = 2  # smallest node count this class supports
 
     def __init__(self, *args, **kwargs):
         self.ignore_log_patterns = [
@@ -66,7 +68,7 @@ class UpgradeTester(Tester):
         cl = self.CL if cl is None else cl
         self.CL = cl  # store for later use in do_upgrade
 
-        self.assertGreaterEqual(nodes, 2, "backwards compatibility tests require at least two nodes")
+        self.assertGreaterEqual(nodes, self.MIN_NODES, "backwards compatibility tests require at least two nodes")
 
         self.protocol_version = protocol_version
 
@@ -200,3 +202,66 @@ class UpgradeTester(Tester):
         if is_win() and self.cluster.version() <= '2.2':
             self.cluster.nodelist()[1].mark_log_for_errors()
         super(UpgradeTester, self).tearDown()
+
+
+class SingleNodeUpgradeTester(UpgradeTester):
+    NODES, RF, __test__, CL, UPGRADE_PATH = 1, 1, False, ConsistencyLevel.ONE, None
+    MIN_NODES = 1  # smallest node count this class supports
+
+    def __init__(self, *args, **kwargs):
+        self.ignore_log_patterns = [
+            # Normal occurance. See CASSANDRA-12026. Likely won't be needed after C* 4.0.
+            r'Unknown column cdc during deserialization',
+        ]
+        super(SingleNodeUpgradeTester, self).__init__(*args, **kwargs)
+
+    def setUp(self):
+        debug("Upgrade test beginning, setting CASSANDRA_VERSION to {}, and jdk to {}. (Prior values will be restored after test)."
+              .format(self.UPGRADE_PATH.starting_version, self.UPGRADE_PATH.starting_meta.java_version))
+        switch_jdks(self.UPGRADE_PATH.starting_meta.java_version)
+        os.environ['CASSANDRA_VERSION'] = self.UPGRADE_PATH.starting_version
+        super(SingleNodeUpgradeTester, self).setUp()
+
+    def do_upgrade(self, session, return_node=False):
+        """
+        Upgrades the nodes and returns a session
+        """
+        session.cluster.shutdown()
+        node = self.cluster.nodelist()[0]
+
+        # stop the nodes
+        node.drain()
+        node.stop(gently=True)
+
+        # Ignore errors before upgrade on Windows
+        # We ignore errors from 2.1, because windows 2.1
+        # support is only beta. There are frequent log errors,
+        # related to filesystem interactions that are a direct result
+        # of the lack of full functionality on 2.1 Windows, and we dont
+        # want these to pollute our results.
+        if is_win() and self.cluster.version() <= '2.2':
+            node.mark_log_for_errors()
+
+        debug('upgrading node1 to {}'.format(self.UPGRADE_PATH.upgrade_version))
+        switch_jdks(self.UPGRADE_PATH.upgrade_meta.java_version)
+
+        node.set_install_dir(version=self.UPGRADE_PATH.upgrade_version)
+
+        # this is a bandaid; after refactoring, upgrades should account for protocol version
+        new_version_from_build = get_version_from_build(node.get_install_dir())
+        if (new_version_from_build >= '3' and self.protocol_version is not None and self.protocol_version < 3):
+            self.skip('Protocol version {} incompatible '
+                      'with Cassandra version {}'.format(self.protocol_version, new_version_from_build))
+        node.set_log_level("DEBUG" if DEBUG else "INFO")
+        node.set_configuration_options(values={'internode_compression': 'none'})
+        node.start(wait_for_binary_proto=True, wait_other_notice=True)
+
+        session = self.patient_exclusive_cql_connection(node, protocol_version=self.protocol_version)
+        session.set_keyspace('ks')
+
+        # Let the node settle briefly before returning connection
+        time.sleep(5)
+
+        if return_node:
+            return (session, node)
+        return session
