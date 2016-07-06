@@ -336,7 +336,10 @@ class UpgradeTester(Tester):
         if rolling:
             # start up processes to write and verify data
             write_proc, verify_proc, verification_queue = self._start_continuous_write_and_verify(wait_for_rowcount=5000)
-            increment_proc, incr_verify_proc, incr_verify_queue = self._start_continuous_counter_increment_and_verify(wait_for_rowcount=5000)
+
+            test_counters = cluster.version() >= '2.2'
+            if test_counters:
+                increment_proc, incr_verify_proc, incr_verify_queue = self._start_continuous_counter_increment_and_verify(wait_for_rowcount=5000)
 
             # upgrade through versions
             for version_meta in self.test_version_metas[1:]:
@@ -357,9 +360,12 @@ class UpgradeTester(Tester):
 
             # Stop write processes
             write_proc.terminate()
-            increment_proc.terminate()
+            if test_counters:
+                increment_proc.terminate()
 
-            self._check_on_subprocs([verify_proc, incr_verify_proc])  # make sure the verification processes are running still
+            self._check_on_subprocs([verify_proc])  # make sure the verification processes are running still
+            if test_counters:
+                self._check_on_subprocs([incr_verify_proc])
 
             # wait for the verification queue's to empty (and check all rows) before continuing
             self._wait_until_queue_condition('writes pending verification', verification_queue, verify_proc, operator.le, 0, max_wait_s=1200)
