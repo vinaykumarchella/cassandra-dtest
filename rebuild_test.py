@@ -1,7 +1,7 @@
 import time
 
 from cassandra import ConsistencyLevel
-from ccmlib.node import NodetoolError
+from ccmlib.node import ToolError
 
 from dtest import Tester
 from tools import insert_c1c2, known_failure, query_c1c2, since
@@ -78,8 +78,9 @@ class TestRebuild(Tester):
         session.execute('USE ks')
 
         # rebuild dc2 from dc1 in background
+        # use nodetool_process to launch concurrent rebuilds.
         mark = node2.mark_log()
-        node2.nodetool('rebuild dc1', False, False)
+        node2.nodetool_process('rebuild dc1')
 
         # concurrent rebuild should not be allowed (CASSANDRA-9119)
         # (following sleep is needed to avoid conflict in 'nodetool()' method setting up env.)
@@ -88,8 +89,8 @@ class TestRebuild(Tester):
         try:
             node2.nodetool('rebuild dc1')
             self.fail("second rebuild should fail")
-        except NodetoolError as e:
-            self.assertTrue('Node is still rebuilding' in e.message)
+        except ToolError as e:
+            self.assertTrue('Node is still rebuilding' in e.stdout)
 
         # wait for stream to end
         node2.watch_log_for('All sessions completed', from_mark=mark)
