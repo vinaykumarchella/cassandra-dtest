@@ -8,7 +8,6 @@ from thrift_bindings.v22.ttypes import (CfDef, Column, ColumnDef,
                                         Deletion, Mutation, SlicePredicate,
                                         SliceRange)
 from thrift_tests import get_thrift_client
-from tools import since
 from upgrade_base import UPGRADE_TEST_RUN, SingleNodeUpgradeTester
 from upgrade_manifest import build_upgrade_pairs
 
