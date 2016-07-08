@@ -8,6 +8,12 @@ from utils import funcutils
 
 class Testget_rate_limited_function(TestCase):
 
+    def shortDescription(self):
+        """
+        Necessary for nose to grab the test names and not the docstrings.
+        """
+        return None
+
     def setUp(self):
         self.mock_func, self.mock_limit = Mock(name='func'), Mock(name='limit')
         self.rate_limited_func = funcutils.get_rate_limited_function(self.mock_func, self.mock_limit)
