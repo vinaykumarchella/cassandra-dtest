@@ -336,7 +336,6 @@ class UpgradeTester(Tester):
         if rolling:
             # start up processes to write and verify data
             write_proc, verify_proc, verification_queue = self._start_continuous_write_and_verify(wait_for_rowcount=5000)
-
             increment_proc, incr_verify_proc, incr_verify_queue = self._start_continuous_counter_increment_and_verify(wait_for_rowcount=5000)
 
             # upgrade through versions
