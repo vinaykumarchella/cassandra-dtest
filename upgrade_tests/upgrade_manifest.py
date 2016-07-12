@@ -77,7 +77,7 @@ MANIFEST = {
 #      export UPGRADE_TEST_RUN=true
 #      To run all, use 'nosetests -v upgrade_tests/'. To run specific tests, use 'nosetests -vs --collect-only' to preview the test names, then run nosetests using the desired test name.
 blerer_3_0_x = VersionMeta(name='blerer_3_0_x', variant='indev', version='github:blerer/11393-3.0', min_proto_v=3, max_proto_v=4, java_versions=(8,))
-blerer_3_x = VersionMeta(name='blerer_3_x', variant='indev', version='github:blerer/11393-3.7', min_proto_v=3, max_proto_v=4, java_versions=(8,))
+blerer_3_x = VersionMeta(name='blerer_3_x', variant='indev', version='github:blerer/11393-3.9', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 OVERRIDE_MANIFEST = {
     current_2_1_x: [blerer_3_0_x, blerer_3_x],
     current_2_2_x: [blerer_3_0_x, blerer_3_x],
