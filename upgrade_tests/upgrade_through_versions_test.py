@@ -19,7 +19,8 @@ from tools import generate_ssl_stores, known_failure, new_node
 from upgrade_base import UPGRADE_TEST_RUN, switch_jdks
 from upgrade_manifest import (build_upgrade_pairs, current_2_0_x,
                               current_2_1_x, current_2_2_x, current_3_0_x,
-                              head_trunk, indev_2_2_x, next_2_2_x)
+                              get_version_family, indev_2_2_x, indev_3_x,
+                              next_2_2_x)
 
 
 def data_writer(tester, to_verify_queue, verification_done_queue, rewrite_probability=0):
@@ -832,27 +833,29 @@ MULTI_UPGRADES = (
 
     # Proto v3 upgrades (v3 is supported on 2.1, 2.2, 3.0, 3.1, trunk)
     MultiUpgrade(name='ProtoV3Upgrade_AllVersions_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_1_x, current_2_2_x, current_3_0_x, head_trunk], protocol_version=3, extra_config=None),
+                 version_metas=[current_2_1_x, current_2_2_x, current_3_0_x, indev_3_x], protocol_version=3, extra_config=None),
     MultiUpgrade(name='ProtoV3Upgrade_AllVersions_RandomPartitioner_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_1_x, current_2_2_x, current_3_0_x, head_trunk], protocol_version=3,
+                 version_metas=[current_2_1_x, current_2_2_x, current_3_0_x, indev_3_x], protocol_version=3,
                  extra_config=(
                      ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
                  )),
 
     # Proto v4 upgrades (v4 is supported on 2.2, 3.0, 3.1, trunk)
     MultiUpgrade(name='ProtoV4Upgrade_AllVersions_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_2_x, current_3_0_x, head_trunk], protocol_version=4, extra_config=None),
+                 version_metas=[current_2_2_x, current_3_0_x, indev_3_x], protocol_version=4, extra_config=None),
     MultiUpgrade(name='ProtoV4Upgrade_AllVersions_RandomPartitioner_EndsAt_Trunk_HEAD',
-                 version_metas=[current_2_2_x, current_3_0_x, head_trunk], protocol_version=4,
+                 version_metas=[current_2_2_x, current_3_0_x, indev_3_x], protocol_version=4,
                  extra_config=(
                      ('partitioner', 'org.apache.cassandra.dht.RandomPartitioner'),
                  )),
 )
 
 for upgrade in MULTI_UPGRADES:
-    # if any version_metas are None, this means they are verions not to be tested currently
+    # if any version_metas are None, this means they are versions not to be tested currently
     if all(upgrade.version_metas):
-        create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
+        # only add a test case if it ends on the version currently being tested
+        if upgrade.version_metas[-1].family == get_version_family():
+            create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
 
 
 for pair in build_upgrade_pairs():
