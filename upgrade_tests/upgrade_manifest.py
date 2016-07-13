@@ -30,6 +30,19 @@ def get_version_family():
     return version_family
 
 
+def clone_meta_with_local_version(meta):
+    """
+    Takes a VersionMeta and returns a new VersionMeta with the version replace
+    with the current envs C* sha.
+    """
+    override_version = 'git:{}'.format(CASSANDRA_SHA)
+    return VersionMeta(
+        name=meta.name, family=meta.family, variant=meta.variant,
+        version=override_version, min_proto_v=meta.min_proto_v, max_proto_v=meta.max_proto_v,
+        java_versions=meta.java_versions
+    )
+
+
 class VersionMeta(namedtuple('_VersionMeta', ('name', 'family', 'variant', 'version', 'min_proto_v', 'max_proto_v', 'java_versions'))):
     """
     VersionMeta's are namedtuples that capture data about version family, protocols supported, and current version identifiers
@@ -162,12 +175,7 @@ def build_upgrade_pairs():
                 # To do that, we need to upgrade to the version found locally,
                 # so we're copying the metadata for the *final* version and subbing in the
                 # local git sha (rather than a previously chosen version).
-                override_version = 'git:{}'.format(CASSANDRA_SHA)
-                destination_meta = VersionMeta(
-                    name=destination_meta.name, family=destination_meta.family, variant=destination_meta.variant,
-                    version=override_version, min_proto_v=destination_meta.min_proto_v, max_proto_v=destination_meta.max_proto_v,
-                    java_versions=destination_meta.java_versions
-                )
+                destination_meta = clone_meta_with_local_version(destination_meta)
 
             valid_upgrade_pairs.append(
                 UpgradePath(
