@@ -157,9 +157,9 @@ def build_upgrade_pairs():
                 continue
 
             if not (RUN_STATIC_UPGRADE_MATRIX or OVERRIDE_MANIFEST):
-                # we're not running the full static matrix nor are we working with a an overriden manifest
+                # We're not running the full static matrix nor are we working with a an overriden manifest,
                 # which means we're going to test only cases relevant to the local environment.
-                # to do that we need to upgrade to the version found locally,
+                # To do that, we need to upgrade to the version found locally,
                 # so we're copying the metadata for the *final* version and subbing in the
                 # local git sha (rather than a previously chosen version).
                 override_version = 'git:{}'.format(CASSANDRA_SHA)
