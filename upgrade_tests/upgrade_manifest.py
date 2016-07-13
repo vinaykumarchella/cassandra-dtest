@@ -33,8 +33,8 @@ def get_version_family():
 class VersionMeta(namedtuple('_VersionMeta', ('name', 'family', 'variant', 'version', 'min_proto_v', 'max_proto_v', 'java_versions'))):
     """
     VersionMeta's are namedtuples that capture data about version family, protocols supported, and current version identifiers
-    they must have a 'variant' value of 'current', 'indev', or 'next', where 'current' means most recent released version,
-    'indev' means where changing code is found, 'next' means a tentative tag.
+    they must have a 'variant' value of 'current' or 'indev', where 'current' means most recent released version,
+    'indev' means where changing code is found.
     """
     @property
     def java_version(self):
@@ -43,23 +43,18 @@ class VersionMeta(namedtuple('_VersionMeta', ('name', 'family', 'variant', 'vers
 
 indev_2_0_x = None  # None if release not likely
 current_2_0_x = VersionMeta(name='current_2_0_x', family='2.0.x', variant='current', version='2.0.17', min_proto_v=1, max_proto_v=2, java_versions=(7,))
-next_2_0_x = None  # None if not yet tagged
 
 indev_2_1_x = VersionMeta(name='indev_2_1_x', family='2.1.x', variant='indev', version='git:cassandra-2.1', min_proto_v=1, max_proto_v=3, java_versions=(7, 8))
 current_2_1_x = VersionMeta(name='current_2_1_x', family='2.1.x', variant='current', version='2.1.15', min_proto_v=1, max_proto_v=3, java_versions=(7, 8))
-next_2_1_x = None  # None if not yet tagged
 
 indev_2_2_x = VersionMeta(name='indev_2_2_x', family='2.2.x', variant='indev', version='git:cassandra-2.2', min_proto_v=1, max_proto_v=4, java_versions=(7, 8))
 current_2_2_x = VersionMeta(name='current_2_2_x', family='2.2.x', variant='current', version='2.2.7', min_proto_v=1, max_proto_v=4, java_versions=(7, 8))
-next_2_2_x = None  # None if not yet tagged
 
 indev_3_0_x = VersionMeta(name='indev_3_0_x', family='3.0.x', variant='indev', version='git:cassandra-3.0', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 current_3_0_x = VersionMeta(name='current_3_0_x', family='3.0.x', variant='current', version='3.0.8', min_proto_v=3, max_proto_v=4, java_versions=(8,))
-next_3_0_x = None  # None if not yet tagged
 
 indev_3_x = VersionMeta(name='indev_3_x', family='3.x', variant='indev', version='git:trunk', min_proto_v=3, max_proto_v=4, java_versions=(8,))
 current_3_x = VersionMeta(name='current_3_x', family='3.x', variant='current', version='3.7', min_proto_v=3, max_proto_v=4, java_versions=(8,))
-next_3_x = None  # None if not yet tagged
 
 
 # MANIFEST maps a VersionMeta representing a line/variant to a list of other VersionMeta's representing supported upgrades
@@ -70,21 +65,17 @@ next_3_x = None  # None if not yet tagged
 #   3) Nodes upgraded to version B can read data stored by the predecessor version A, and from a data standpoint will function the same as if they always ran version B.
 #   4) If a new sstable format is present in version B, writes will occur in that format after upgrade. Running sstableupgrade on version B will proactively convert version A sstables to version B.
 MANIFEST = {
-    indev_2_0_x: [indev_2_1_x, current_2_1_x, next_2_1_x],
-    current_2_0_x: [indev_2_0_x, indev_2_1_x, current_2_1_x, next_2_1_x],
-    next_2_0_x: [indev_2_1_x, current_2_1_x, next_2_1_x],
+    indev_2_0_x: [indev_2_1_x, current_2_1_x],
+    current_2_0_x: [indev_2_0_x, indev_2_1_x, current_2_1_x],
 
-    indev_2_1_x: [indev_2_2_x, current_2_2_x, next_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x],
-    current_2_1_x: [indev_2_1_x, indev_2_2_x, current_2_2_x, next_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x],
-    next_2_1_x: [indev_2_2_x, current_2_2_x, next_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x],
+    indev_2_1_x: [indev_2_2_x, current_2_2_x, indev_3_0_x, current_3_0_x, indev_3_x, current_3_x],
+    current_2_1_x: [indev_2_1_x, indev_2_2_x, current_2_2_x, indev_3_0_x, current_3_0_x, indev_3_x, current_3_x],
 
-    indev_2_2_x: [indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x],
-    current_2_2_x: [indev_2_2_x, indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x],
-    next_2_2_x: [indev_3_0_x, current_3_0_x, next_3_0_x, indev_3_x, current_3_x, next_3_x],
+    indev_2_2_x: [indev_3_0_x, current_3_0_x, indev_3_x, current_3_x],
+    current_2_2_x: [indev_2_2_x, indev_3_0_x, current_3_0_x, indev_3_x, current_3_x],
 
-    indev_3_0_x: [indev_3_x, current_3_x, next_3_x],
-    current_3_0_x: [indev_3_0_x, indev_3_x, current_3_x, next_3_x],
-    next_3_0_x: [indev_3_x, current_3_x, next_3_x],
+    indev_3_0_x: [indev_3_x, current_3_x],
+    current_3_0_x: [indev_3_0_x, indev_3_x, current_3_x],
 
     current_3_x: [indev_3_x],
 }
@@ -130,9 +121,7 @@ def _is_targeted_variant_combo(origin_meta, destination_meta):
         return True
 
     # is this an upgrade variant combination we care about?
-    tested_variant_combo = ((origin_meta.variant == 'current' and destination_meta.variant == 'indev') or
-                            (origin_meta.variant == 'current' and destination_meta.variant == 'next') or
-                            (origin_meta.variant == 'next' and destination_meta.variant == 'indev'))
+    tested_variant_combo = (origin_meta.variant == 'current' and destination_meta.variant == 'indev')
 
     # RUN_STATIC_UPGRADE_MATRIX means were running the full upgrade suite and ignoring the local C* version.
     if tested_variant_combo and RUN_STATIC_UPGRADE_MATRIX:
