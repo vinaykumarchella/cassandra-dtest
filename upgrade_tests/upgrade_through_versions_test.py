@@ -779,7 +779,7 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
     parent_class_names = [cls.__name__ for cls in parent_classes]
 
     print_("Creating test class {} ".format(clsname))
-    print_("  for C* versions: {} ".format(version_metas))
+    print_("  for C* versions:\n{} ".format(pprint.pformat(version_metas)))
     print_("  using protocol: v{}, and parent classes: {}".format(protocol_version, parent_class_names))
     print_("  to run these tests alone, use `nosetests {}.py:{}`".format(__name__, clsname))
 
