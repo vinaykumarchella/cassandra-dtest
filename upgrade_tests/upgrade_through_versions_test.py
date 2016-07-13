@@ -848,7 +848,7 @@ MULTI_UPGRADES = (
 for upgrade in MULTI_UPGRADES:
     # if any version_metas are None, this means they are versions not to be tested currently
     if all(upgrade.version_metas):
-        # only add a test case if it ends on the version currently being tested, or if we're running the full upgrade matrix
+        # only add a test case if it ends on the version family of the current env; or if we're running the full upgrade matrix
         if (upgrade.version_metas[-1].family == get_version_family()) or RUN_STATIC_UPGRADE_MATRIX:
             if RUN_STATIC_UPGRADE_MATRIX:
                 create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
