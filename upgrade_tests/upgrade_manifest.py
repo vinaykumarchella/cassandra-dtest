@@ -1,7 +1,8 @@
 from collections import namedtuple
 from distutils.version import LooseVersion
 
-from dtest import CASSANDRA_VERSION_FROM_BUILD, debug
+from dtest import (CASSANDRA_SHA, CASSANDRA_VERSION_FROM_BUILD,
+                   RUN_STATIC_UPGRADE_MATRIX, debug)
 
 # UpgradePath's contain data about upgrade paths we wish to test
 # They also contain VersionMeta's for each version the path is testing
@@ -128,12 +129,19 @@ def _is_targeted_variant_combo(origin_meta, destination_meta):
     if bool(OVERRIDE_MANIFEST):
         return True
 
-    # let's only run cases which upgrade to the current version family
-    # and are a relevant combination of variants
-    if (destination_meta.family == get_version_family()):
-        return ((origin_meta.variant == 'current' and destination_meta.variant == 'indev') or
-                (origin_meta.variant == 'current' and destination_meta.variant == 'next') or
-                (origin_meta.variant == 'next' and destination_meta.variant == 'indev'))
+    # is this an upgrade variant combination we care about?
+    tested_variant_combo = ((origin_meta.variant == 'current' and destination_meta.variant == 'indev') or
+                            (origin_meta.variant == 'current' and destination_meta.variant == 'next') or
+                            (origin_meta.variant == 'next' and destination_meta.variant == 'indev'))
+
+    # RUN_STATIC_UPGRADE_MATRIX means were running the full upgrade suite and ignoring the local C* version.
+    if tested_variant_combo and RUN_STATIC_UPGRADE_MATRIX:
+        return True
+
+    # run only cases which upgrade to the current version family/line
+    # this effectively filters out every test but those upgrading to the locally installed version
+    if tested_variant_combo and (destination_meta.family == get_version_family()):
+        return True
 
 
 def build_upgrade_pairs():
@@ -158,6 +166,19 @@ def build_upgrade_pairs():
             if not _have_common_proto(origin_meta, destination_meta):
                 debug("skipping class creation, no compatible protocol version between {} and {}".format(origin_meta.name, destination_meta.name))
                 continue
+
+            if not (RUN_STATIC_UPGRADE_MATRIX or OVERRIDE_MANIFEST):
+                # we're not running the full static matrix nor are we working with a an overriden manifest
+                # which means we're going to test only cases relevant to the local environment.
+                # to do that we need to upgrade to the version found locally,
+                # so we're copying the metadata for the *final* version and subbing in the
+                # local git sha (rather than a previously chosen version).
+                override_version = 'git:{}'.format(CASSANDRA_SHA)
+                destination_meta = VersionMeta(
+                    name=destination_meta.name, family=destination_meta.family, variant=destination_meta.variant,
+                    version=override_version, min_proto_v=destination_meta.min_proto_v, max_proto_v=destination_meta.max_proto_v,
+                    java_versions=destination_meta.java_versions
+                )
 
             valid_upgrade_pairs.append(
                 UpgradePath(
