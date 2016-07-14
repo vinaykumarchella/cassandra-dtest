@@ -860,16 +860,3 @@ for pair in build_upgrade_pairs():
         protocol_version=pair.starting_meta.max_proto_v,
         bootstrap_test=True
     )
-
-
-# FOR CUSTOM/LOCAL UPGRADE PATH TESTING:
-#    Define UPGRADE_PATH in your env as a comma-separated list of versions
-#    Versions can be any format CCM works with, including: git:cassandra-2.1, 2.1.12, local:somebranch, etc.
-#    Set your desired protocol version in your env's PROTOCOL_VERSION
-if os.environ.get('UPGRADE_PATH'):
-    create_upgrade_class(
-        'UserDefinedUpgradeTest',
-        os.environ.get('UPGRADE_PATH').split(','),
-        bootstrap_test=True,
-        protocol_version=int(os.environ.get('PROTOCOL_VERSION', 3))
-    )
