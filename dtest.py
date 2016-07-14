@@ -20,6 +20,7 @@ import traceback
 import types
 import unittest.case
 from collections import OrderedDict
+from subprocess import CalledProcessError
 from unittest import TestCase
 
 import ccmlib.repository
@@ -103,7 +104,10 @@ logging.getLogger('cassandra').setLevel(logging.INFO)
 
 
 def get_sha(repo_dir):
-    return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir).strip()
+    try:
+        return "git:{}".format(subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir).strip())
+    except CalledProcessError:
+        return None
 
 
 # There are times when we want to know the C* version we're testing against
@@ -119,10 +123,10 @@ if _cassandra_version_slug:
     # fetch but don't build the specified C* version
     ccm_repo_cache_dir, _ = ccmlib.repository.setup(_cassandra_version_slug)
     CASSANDRA_VERSION_FROM_BUILD = get_version_from_build(ccm_repo_cache_dir)
-    CASSANDRA_SHA = get_sha(ccm_repo_cache_dir)
+    CASSANDRA_GITREF = get_sha(ccm_repo_cache_dir)  # will be set None when not a git repo
 else:
     CASSANDRA_VERSION_FROM_BUILD = get_version_from_build(CASSANDRA_DIR)
-    CASSANDRA_SHA = get_sha(CASSANDRA_DIR)
+    CASSANDRA_GITREF = get_sha(CASSANDRA_DIR)
 
 
 # Determine the location of the libjemalloc jar so that we can specify it

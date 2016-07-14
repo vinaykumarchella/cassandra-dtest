@@ -1,7 +1,7 @@
 from collections import namedtuple
 from distutils.version import LooseVersion
 
-from dtest import (CASSANDRA_SHA, CASSANDRA_VERSION_FROM_BUILD,
+from dtest import (CASSANDRA_GITREF, CASSANDRA_VERSION_FROM_BUILD,
                    RUN_STATIC_UPGRADE_MATRIX, debug)
 
 # UpgradePath's contain data about upgrade paths we wish to test
@@ -32,10 +32,11 @@ def get_version_family():
 
 def clone_meta_with_local_version(meta):
     """
-    Takes a VersionMeta and returns a new VersionMeta with the version replace
+    Takes a VersionMeta and returns a new VersionMeta with the version replaced
     with the current envs C* sha.
     """
-    override_version = 'git:{}'.format(CASSANDRA_SHA)
+    # fall back to bare version if needed
+    override_version = CASSANDRA_GITREF or CASSANDRA_VERSION_FROM_BUILD
     return VersionMeta(
         name=meta.name, family=meta.family, variant=meta.variant,
         version=override_version, min_proto_v=meta.min_proto_v, max_proto_v=meta.max_proto_v,
