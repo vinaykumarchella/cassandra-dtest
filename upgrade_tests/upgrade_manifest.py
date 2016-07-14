@@ -129,8 +129,6 @@ def _is_targeted_variant_combo(origin_meta, destination_meta):
 
     for now we only test upgrades of these types:
       current -> in-dev (aka: released -> branch)
-      current -> next (aka: released -> proposed release point)
-      next -> in-dev (aka: proposed release point -> branch)
     """
     # if we're overriding the test manifest, we don't want to filter anything out
     if bool(OVERRIDE_MANIFEST):
