@@ -12,7 +12,7 @@ from assertions import assert_exception
 from datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from dtest import RUN_STATIC_UPGRADE_MATRIX, debug, run_scenarios
 from tools import known_failure, rows_to_list, since
-from upgrade_base import UPGRADE_TEST_RUN, UpgradeTester
+from upgrade_base import UpgradeTester
 from upgrade_manifest import build_upgrade_pairs
 
 
@@ -1720,7 +1720,7 @@ topology_specs = [
      'RF': 1},
 ]
 
-specs = [dict(s, UPGRADE_PATH=p, __test__=UPGRADE_TEST_RUN)
+specs = [dict(s, UPGRADE_PATH=p, __test__=True)
          for s, p in itertools.product(topology_specs, build_upgrade_pairs())]
 
 for klaus in BasePagingTester.__subclasses__():

@@ -17,7 +17,7 @@ from six import print_
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, Tester, debug
 from tools import generate_ssl_stores, known_failure, new_node
-from upgrade_base import UPGRADE_TEST_RUN, switch_jdks
+from upgrade_base import switch_jdks
 from upgrade_manifest import (build_upgrade_pairs, current_2_0_x,
                               current_2_1_x, current_2_2_x, current_3_0_x,
                               indev_2_2_x, indev_3_x)
@@ -789,7 +789,7 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
         type(
             clsname,
             parent_classes,
-            {'test_version_metas': version_metas, '__test__': UPGRADE_TEST_RUN, 'protocol_version': protocol_version, 'extra_config': extra_config}
+            {'test_version_metas': version_metas, '__test__': True, 'protocol_version': protocol_version, 'extra_config': extra_config}
         ))
 
     if clsname in globals():

@@ -29,7 +29,7 @@ from thrift_bindings.v22.ttypes import (CfDef, Column, ColumnDef,
                                         SliceRange)
 from thrift_tests import get_thrift_client
 from tools import known_failure, require, rows_to_list, since
-from upgrade_base import UPGRADE_TEST_RUN, UpgradeTester
+from upgrade_base import UpgradeTester
 from upgrade_manifest import build_upgrade_pairs
 
 
@@ -5244,7 +5244,7 @@ topology_specs = [
     {'NODES': 2,
      'RF': 1},
 ]
-specs = [dict(s, UPGRADE_PATH=p, __test__=UPGRADE_TEST_RUN)
+specs = [dict(s, UPGRADE_PATH=p, __test__=True)
          for s, p in itertools.product(topology_specs, build_upgrade_pairs())]
 
 for spec in specs:
