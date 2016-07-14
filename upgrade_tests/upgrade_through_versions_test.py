@@ -8,7 +8,7 @@ import uuid
 from collections import defaultdict, namedtuple
 from multiprocessing import Process, Queue
 from Queue import Empty, Full
-from unittest import skipIf
+from unittest import skipUnless
 
 import psutil
 from cassandra import ConsistencyLevel, WriteTimeout
@@ -783,19 +783,9 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
     print_("  using protocol: v{}, and parent classes: {}".format(protocol_version, parent_class_names))
     print_("  to run these tests alone, use `nosetests {}.py:{}`".format(__name__, clsname))
 
-    if RUN_STATIC_UPGRADE_MATRIX:
-        # no cases will be skipped when running the full upgrade test matrix
-        skip_condition = False
-    else:
-        # since we're not running the full test matrix, we're going to test
-        # only upgrades applicable to the current environment, so we check
-        # the version family of the last version (i.e. the last version in the path)
-        # to see if it matches the current env and is therefore able to be run
-        skip_condition = not version_metas[-1].matches_current_env_version_family()
-        # change the last version in the upgrade path to match the current env's version exactly
-        version_metas[-1] = version_metas[-1].clone_with_local_env_version()
+    upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or version_metas[-1].matches_current_env_version_family()
 
-    newcls = skipIf(skip_condition, 'test not applicable to env.')(
+    newcls = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(
         type(
             clsname,
             parent_classes,
@@ -852,7 +842,15 @@ MULTI_UPGRADES = (
 for upgrade in MULTI_UPGRADES:
     # if any version_metas are None, this means they are versions not to be tested currently
     if all(upgrade.version_metas):
-        create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
+        metas = upgrade.version_metas
+
+        if not RUN_STATIC_UPGRADE_MATRIX:
+            # since we're not running the full test matrix, we're going to test
+            # only upgrades applicable to the current environment, so we need to
+            # change the last version in the upgrade path to match the current env's version exactly
+            metas[-1] = metas[-1].clone_with_local_env_version()
+
+        create_upgrade_class(upgrade.name, [m for m in metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
 
 
 for pair in build_upgrade_pairs():
