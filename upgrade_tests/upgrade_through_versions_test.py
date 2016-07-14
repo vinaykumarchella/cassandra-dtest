@@ -849,13 +849,13 @@ for upgrade in MULTI_UPGRADES:
     # if any version_metas are None, this means they are versions not to be tested currently
     if all(upgrade.version_metas):
         # only add a test case if it ends on the version family of the current env; or if we're running the full upgrade matrix
-        if (upgrade.version_metas[-1].family == get_version_family()) or RUN_STATIC_UPGRADE_MATRIX:
-            if RUN_STATIC_UPGRADE_MATRIX:
-                create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
-            else:
-                # we're running in local-ish mode meaning, we want to use the C* from the env to upgrade to (rather than some pre-selected version)
-                upgrade = clone_multiupgrade_with_last_version_local(upgrade)
-                create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
+# TODO: maybe add to skipif logic:  if (upgrade.version_metas[-1].family == get_version_family()) or RUN_STATIC_UPGRADE_MATRIX:
+        if RUN_STATIC_UPGRADE_MATRIX:
+            create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
+        else:
+            # we're running in local-ish mode meaning, we want to use the C* from the env to upgrade to (rather than some pre-selected version)
+            upgrade = clone_multiupgrade_with_last_version_local(upgrade)
+            create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
 
 
 for pair in build_upgrade_pairs():
