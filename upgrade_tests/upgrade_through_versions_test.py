@@ -8,6 +8,7 @@ import uuid
 from collections import defaultdict, namedtuple
 from multiprocessing import Process, Queue
 from Queue import Empty, Full
+from unittest import skipIf
 
 import psutil
 from cassandra import ConsistencyLevel, WriteTimeout
@@ -17,10 +18,9 @@ from six import print_
 from dtest import RUN_STATIC_UPGRADE_MATRIX, Tester, debug
 from tools import generate_ssl_stores, known_failure, new_node
 from upgrade_base import UPGRADE_TEST_RUN, switch_jdks
-from upgrade_manifest import (build_upgrade_pairs,
-                              clone_meta_with_local_version, current_2_0_x,
+from upgrade_manifest import (build_upgrade_pairs, current_2_0_x,
                               current_2_1_x, current_2_2_x, current_3_0_x,
-                              get_version_family, indev_2_2_x, indev_3_x)
+                              indev_2_2_x, indev_3_x)
 
 
 def data_writer(tester, to_verify_queue, verification_done_queue, rewrite_probability=0):
@@ -755,15 +755,6 @@ class BootstrapMixin(object):
                 );""")
 
 
-def clone_multiupgrade_with_last_version_local(multi):
-    """
-    Takes a MultiUpgrade and returns a new MultiUpgrade with the last VersionMeta
-    in the upgrade path set to the local git sha.
-    """
-    version_metas = multi.version_metas[:-1] + [clone_meta_with_local_version(multi.version_metas[-1])]
-    return MultiUpgrade(name=multi.name, version_metas=version_metas, protocol_version=multi.protocol_version, extra_config=multi.extra_config)
-
-
 def create_upgrade_class(clsname, version_metas, protocol_version,
                          bootstrap_test=False, extra_config=None):
     """
@@ -792,11 +783,24 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
     print_("  using protocol: v{}, and parent classes: {}".format(protocol_version, parent_class_names))
     print_("  to run these tests alone, use `nosetests {}.py:{}`".format(__name__, clsname))
 
-    newcls = type(
-        clsname,
-        parent_classes,
-        {'test_version_metas': version_metas, '__test__': UPGRADE_TEST_RUN, 'protocol_version': protocol_version, 'extra_config': extra_config}
-    )
+    if RUN_STATIC_UPGRADE_MATRIX:
+        # no cases will be skipped when running the full upgrade test matrix
+        skip_condition = False
+    else:
+        # since we're not running the full test matrix, we're going to test
+        # only upgrades applicable to the current environment, so we check
+        # the version family of the last version (i.e. the last version in the path)
+        # to see if it matches the current env and is therefore able to be run
+        skip_condition = not version_metas[-1].matches_current_env_version_family()
+        # change the last version in the upgrade path to match the current env's version exactly
+        version_metas[-1] = version_metas[-1].clone_with_local_env_version()
+
+    newcls = skipIf(skip_condition, 'test not applicable to env.')(
+        type(
+            clsname,
+            parent_classes,
+            {'test_version_metas': version_metas, '__test__': UPGRADE_TEST_RUN, 'protocol_version': protocol_version, 'extra_config': extra_config}
+        ))
 
     if clsname in globals():
         raise RuntimeError("Class by name already exists!")
@@ -848,14 +852,7 @@ MULTI_UPGRADES = (
 for upgrade in MULTI_UPGRADES:
     # if any version_metas are None, this means they are versions not to be tested currently
     if all(upgrade.version_metas):
-        # only add a test case if it ends on the version family of the current env; or if we're running the full upgrade matrix
-# TODO: maybe add to skipif logic:  if (upgrade.version_metas[-1].family == get_version_family()) or RUN_STATIC_UPGRADE_MATRIX:
-        if RUN_STATIC_UPGRADE_MATRIX:
-            create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
-        else:
-            # we're running in local-ish mode meaning, we want to use the C* from the env to upgrade to (rather than some pre-selected version)
-            upgrade = clone_multiupgrade_with_last_version_local(upgrade)
-            create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
+        create_upgrade_class(upgrade.name, [m for m in upgrade.version_metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
 
 
 for pair in build_upgrade_pairs():
