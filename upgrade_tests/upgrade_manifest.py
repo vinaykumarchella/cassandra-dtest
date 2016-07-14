@@ -30,20 +30,6 @@ def get_version_family():
     return version_family
 
 
-def clone_meta_with_local_version(meta):
-    """
-    Takes a VersionMeta and returns a new VersionMeta with the version replaced
-    with the current envs C* sha.
-    """
-    # fall back to bare version if there's no git ref (such as in the case of a packaged version of cassandra)
-    override_version = CASSANDRA_GITREF or CASSANDRA_VERSION_FROM_BUILD
-    return VersionMeta(
-        name=meta.name, family=meta.family, variant=meta.variant,
-        version=override_version, min_proto_v=meta.min_proto_v, max_proto_v=meta.max_proto_v,
-        java_versions=meta.java_versions
-    )
-
-
 class VersionMeta(namedtuple('_VersionMeta', ('name', 'family', 'variant', 'version', 'min_proto_v', 'max_proto_v', 'java_versions'))):
     """
     VersionMeta's are namedtuples that capture data about version family, protocols supported, and current version identifiers
@@ -53,6 +39,22 @@ class VersionMeta(namedtuple('_VersionMeta', ('name', 'family', 'variant', 'vers
     @property
     def java_version(self):
         return max(self.java_versions)
+
+    def matches_current_env_version_family(self):
+        """
+        Returns boolean indicating whether this meta matches the current version family of the environment.
+
+        e.g. Returns true if the current env version family is 3.x and the meta's family attribute is a match.
+        """
+        return self.family == get_version_family()
+
+    def clone_with_local_env_version(self):
+        """
+        Returns a new object cloned from this one, with the version replaced with the local env version.
+        """
+        clone = self._asdict()
+        clone['version'] = CASSANDRA_GITREF or CASSANDRA_VERSION_FROM_BUILD
+        return VersionMeta(**clone)
 
 
 indev_2_0_x = None  # None if release not likely
@@ -178,7 +180,7 @@ def build_upgrade_pairs():
                 # To do that, we need to upgrade to the version found locally,
                 # so we're copying the metadata for the *final* version and subbing in the
                 # local git sha (rather than a previously chosen version).
-                destination_meta = clone_meta_with_local_version(destination_meta)
+                destination_meta = destination_meta.clone_with_local_env_version()
 
             valid_upgrade_pairs.append(
                 UpgradePath(
