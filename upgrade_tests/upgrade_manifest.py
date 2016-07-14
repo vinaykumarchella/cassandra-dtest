@@ -35,7 +35,7 @@ def clone_meta_with_local_version(meta):
     Takes a VersionMeta and returns a new VersionMeta with the version replaced
     with the current envs C* sha.
     """
-    # fall back to bare version if needed
+    # fall back to bare version if there's no git ref (such as in the case of a packaged version of cassandra)
     override_version = CASSANDRA_GITREF or CASSANDRA_VERSION_FROM_BUILD
     return VersionMeta(
         name=meta.name, family=meta.family, variant=meta.variant,
