@@ -137,17 +137,6 @@ def _is_targeted_variant_combo(origin_meta, destination_meta):
     return (origin_meta.variant == 'current' and destination_meta.variant == 'indev')
 
 
-# TODO: KILL THIS IF ITS NOT NEEDED
-    # # RUN_STATIC_UPGRADE_MATRIX means were running the full upgrade suite and ignoring the local C* version.
-    # if tested_variant_combo and RUN_STATIC_UPGRADE_MATRIX:
-    #     return True
-    #
-    # # run only cases which upgrade to the current version family/line
-    # # this effectively filters out every test but those upgrading to the locally installed version
-    # if tested_variant_combo and (destination_meta.family == get_version_family()):
-    #     return True
-
-
 def build_upgrade_pairs():
     """
     Using the manifest (above), builds a set of valid upgrades, according to current testing practices.
