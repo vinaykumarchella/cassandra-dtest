@@ -1,5 +1,4 @@
 import time
-from unittest import skipIf
 
 from dtest import debug
 from repair_tests.repair_test import BaseRepairTest
