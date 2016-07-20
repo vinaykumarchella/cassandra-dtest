@@ -849,7 +849,7 @@ for upgrade in MULTI_UPGRADES:
                 # looks like this test should actually run in the current env, so let's set the final version to match the env exactly
                 oldmeta = metas[-1]
                 newmeta = oldmeta.clone_with_local_env_version()
-                debug("Overriding final test version from {} to {}".format(oldmeta.version, newmeta.version))
+                debug("{} appears applicable to current env. Overriding final test version from {} to {}".format(upgrade.name, oldmeta.version, newmeta.version))
                 metas[-1] = newmeta
 
         create_upgrade_class(upgrade.name, [m for m in metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)

@@ -162,17 +162,19 @@ def build_upgrade_pairs():
                 debug("skipping class creation, no compatible protocol version between {} and {}".format(origin_meta.name, destination_meta.name))
                 continue
 
+            path_name = 'Upgrade_' + origin_meta.name + '_To_' + destination_meta.name
+
             if not (RUN_STATIC_UPGRADE_MATRIX or OVERRIDE_MANIFEST):
                 if destination_meta.matches_current_env_version_family:
                     # looks like this test should actually run in the current env, so let's set the final version to match the env exactly
                     oldmeta = destination_meta
                     newmeta = destination_meta.clone_with_local_env_version()
-                    debug("Overriding final test version from {} to {}".format(oldmeta.version, newmeta.version))
+                    debug("{} appears applicable to current env. Overriding final test version from {} to {}".format(path_name, oldmeta.version, newmeta.version))
                     destination_meta = newmeta
 
             valid_upgrade_pairs.append(
                 UpgradePath(
-                    name='Upgrade_' + origin_meta.name + '_To_' + destination_meta.name,
+                    name=path_name,
                     starting_version=origin_meta.version,
                     upgrade_version=destination_meta.version,
                     starting_meta=origin_meta,
