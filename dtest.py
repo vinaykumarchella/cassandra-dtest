@@ -115,7 +115,7 @@ def get_sha(repo_dir):
             # git call failed for some unknown reason
             raise
     except OSError:
-        raise RuntimeError("Git does not appear to be installed!")
+        raise RuntimeError("Git not installed, or directory {} doesn't exist".format(repo_dir))
 
 
 # There are times when we want to know the C* version we're testing against
