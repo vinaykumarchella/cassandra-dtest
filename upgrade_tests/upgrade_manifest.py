@@ -9,7 +9,7 @@ from dtest import (CASSANDRA_GITREF, CASSANDRA_VERSION_FROM_BUILD,
 UpgradePath = namedtuple('UpgradePath', ('name', 'starting_version', 'upgrade_version', 'starting_meta', 'upgrade_meta'))
 
 
-def get_version_family():
+def _get_version_family():
     """
     Detects the version family (line) using dtest.py:CASSANDRA_VERSION_FROM_BUILD
     """
@@ -30,6 +30,9 @@ def get_version_family():
     return version_family
 
 
+VERSION_FAMILY = _get_version_family()
+
+
 class VersionMeta(namedtuple('_VersionMeta', ('name', 'family', 'variant', 'version', 'min_proto_v', 'max_proto_v', 'java_versions'))):
     """
     VersionMeta's are namedtuples that capture data about version family, protocols supported, and current version identifiers
@@ -40,13 +43,14 @@ class VersionMeta(namedtuple('_VersionMeta', ('name', 'family', 'variant', 'vers
     def java_version(self):
         return max(self.java_versions)
 
+    @property
     def matches_current_env_version_family(self):
         """
         Returns boolean indicating whether this meta matches the current version family of the environment.
 
         e.g. Returns true if the current env version family is 3.x and the meta's family attribute is a match.
         """
-        return self.family == get_version_family()
+        return self.family == VERSION_FAMILY
 
     def clone_with_local_env_version(self):
         """

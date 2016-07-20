@@ -67,5 +67,5 @@ for path in build_upgrade_pairs():
     spec = {'UPGRADE_PATH': path,
             '__test__': True}
 
-    upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or path.upgrade_meta.matches_current_env_version_family()
+    upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or path.upgrade_meta.matches_current_env_version_family
     globals()[gen_class_name] = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(type(gen_class_name, (TestForRegressions,), spec))

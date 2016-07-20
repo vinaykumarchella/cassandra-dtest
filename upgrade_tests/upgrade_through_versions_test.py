@@ -783,7 +783,7 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
     print_("  using protocol: v{}, and parent classes: {}".format(protocol_version, parent_class_names))
     print_("  to run these tests alone, use `nosetests {}.py:{}`".format(__name__, clsname))
 
-    upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or version_metas[-1].matches_current_env_version_family()
+    upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or version_metas[-1].matches_current_env_version_family
 
     newcls = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(
         type(

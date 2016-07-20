@@ -5254,5 +5254,5 @@ for spec in specs:
     gen_class_name = TestCQL.__name__ + suffix
     assert_not_in(gen_class_name, globals())
 
-    upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or spec['UPGRADE_PATH'].upgrade_meta.matches_current_env_version_family()
+    upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or spec['UPGRADE_PATH'].upgrade_meta.matches_current_env_version_family
     globals()[gen_class_name] = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(type(gen_class_name, (TestCQL,), spec))
