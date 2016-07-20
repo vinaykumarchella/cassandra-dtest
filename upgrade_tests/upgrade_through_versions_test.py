@@ -848,9 +848,7 @@ for upgrade in MULTI_UPGRADES:
             # since we're not running the full test matrix, we're going to test
             # only upgrades applicable to the current environment, so we need to
             # change the last version in the upgrade path to match the current env's version exactly
-            newmeta = metas[-1].clone_with_local_env_version()
-            debug("Updating upgrade test case to end on current local version ({} is changing to {})".format(metas[-1].version, newmeta.version))
-            metas[-1] = newmeta
+            metas[-1] = metas[-1].clone_with_local_env_version()
 
         create_upgrade_class(upgrade.name, [m for m in metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
 
