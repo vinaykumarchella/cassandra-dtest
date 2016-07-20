@@ -132,7 +132,7 @@ def _is_targeted_variant_combo(origin_meta, destination_meta):
       current -> in-dev (aka: released -> branch)
     """
     # if we're overriding the test manifest, we don't want to filter anything out
-    if bool(OVERRIDE_MANIFEST):
+    if OVERRIDE_MANIFEST:
         return True
 
     # is this an upgrade variant combination we care about?
