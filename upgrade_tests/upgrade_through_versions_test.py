@@ -845,10 +845,12 @@ for upgrade in MULTI_UPGRADES:
         metas = upgrade.version_metas
 
         if not RUN_STATIC_UPGRADE_MATRIX:
-            # since we're not running the full test matrix, we're going to test
-            # only upgrades applicable to the current environment, so we need to
-            # change the last version in the upgrade path to match the current env's version exactly
-            metas[-1] = metas[-1].clone_with_local_env_version()
+            if metas[-1].matches_current_env_version_family():
+                # looks like this test should actually run in the current env, so let's set the final version to match the env exactly
+                oldmeta = metas[-1]
+                newmeta = oldmeta.clone_with_local_env_version()
+                debug("Overriding final test version from {} to {}".format(oldmeta.version, newmeta.version))
+                metas[-1] = newmeta
 
         create_upgrade_class(upgrade.name, [m for m in metas], protocol_version=upgrade.protocol_version, extra_config=upgrade.extra_config)
 

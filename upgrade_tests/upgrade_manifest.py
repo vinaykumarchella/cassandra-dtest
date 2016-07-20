@@ -163,12 +163,12 @@ def build_upgrade_pairs():
                 continue
 
             if not (RUN_STATIC_UPGRADE_MATRIX or OVERRIDE_MANIFEST):
-                # We're not running the full static matrix nor are we working with a an overriden manifest,
-                # which means we're going to test only cases relevant to the local environment.
-                # To do that, we need to upgrade to the version found locally,
-                # so we're copying the metadata for the *final* version and subbing in the
-                # local git sha (rather than a previously chosen version).
-                destination_meta = destination_meta.clone_with_local_env_version()
+                if destination_meta.matches_current_env_version_family():
+                    # looks like this test should actually run in the current env, so let's set the final version to match the env exactly
+                    oldmeta = destination_meta
+                    newmeta = destination_meta.clone_with_local_env_version()
+                    debug("Overriding final test version from {} to {}".format(oldmeta.version, newmeta.version))
+                    destination_meta = newmeta
 
             valid_upgrade_pairs.append(
                 UpgradePath(
