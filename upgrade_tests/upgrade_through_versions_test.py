@@ -845,7 +845,7 @@ for upgrade in MULTI_UPGRADES:
         metas = upgrade.version_metas
 
         if not RUN_STATIC_UPGRADE_MATRIX:
-            if metas[-1].matches_current_env_version_family():
+            if metas[-1].matches_current_env_version_family:
                 # looks like this test should actually run in the current env, so let's set the final version to match the env exactly
                 oldmeta = metas[-1]
                 newmeta = oldmeta.clone_with_local_env_version()

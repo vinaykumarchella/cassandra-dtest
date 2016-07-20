@@ -163,7 +163,7 @@ def build_upgrade_pairs():
                 continue
 
             if not (RUN_STATIC_UPGRADE_MATRIX or OVERRIDE_MANIFEST):
-                if destination_meta.matches_current_env_version_family():
+                if destination_meta.matches_current_env_version_family:
                     # looks like this test should actually run in the current env, so let's set the final version to match the env exactly
                     oldmeta = destination_meta
                     newmeta = destination_meta.clone_with_local_env_version()
