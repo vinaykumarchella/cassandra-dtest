@@ -56,9 +56,7 @@ class VersionMeta(namedtuple('_VersionMeta', ('name', 'family', 'variant', 'vers
         """
         Returns a new object cloned from this one, with the version replaced with the local env version.
         """
-        clone = self._asdict()
-        clone['version'] = CASSANDRA_GITREF or CASSANDRA_VERSION_FROM_BUILD
-        return VersionMeta(**clone)
+        return self._replace(version=CASSANDRA_GITREF or CASSANDRA_VERSION_FROM_BUILD)
 
 
 indev_2_0_x = None  # None if release not likely
