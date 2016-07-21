@@ -26,6 +26,9 @@ def _get_version_family():
         version_family = '3.0.x'
     elif current_version > '3.0':
         version_family = '3.x'
+    elif current_version >= '4.0':
+        # when this occurs, it's time to update this manifest a bit!
+        raise RuntimeError("4.0 not yet supported on upgrade tests!")
 
     return version_family
 
