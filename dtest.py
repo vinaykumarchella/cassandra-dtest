@@ -90,6 +90,10 @@ if os.environ.get('DISABLE_VNODES', '').lower() in ('yes', 'true'):
 
 CURRENT_TEST = ""
 
+# set default encoding for all tests - CASSANDRA-11895
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
 logging.basicConfig(filename=os.path.join(LOG_SAVED_DIR, "dtest.log"),
                     filemode='w',
                     format='%(asctime)s,%(msecs)d %(name)s %(current_test)s %(levelname)s %(message)s',
