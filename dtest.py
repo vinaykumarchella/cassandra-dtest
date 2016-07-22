@@ -106,7 +106,10 @@ logging.getLogger('cassandra').setLevel(logging.INFO)
 def get_sha(repo_dir):
     try:
         output = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir).strip()
-        return "git:{}".format(output)
+        prefix = 'git:'
+        if os.environ.get('LOCAL_GIT_REPO') is not None:
+            prefix = 'local:'
+        return "{}{}".format(prefix, output)
     except CalledProcessError, e:
         if re.search('Not a git repository', e.message) is not None:
             # we tried to get a sha, but repo_dir isn't a git repo. No big deal, must just be working from a non-git install.
