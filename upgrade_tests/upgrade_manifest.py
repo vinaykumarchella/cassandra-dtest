@@ -107,11 +107,15 @@ MANIFEST = {
 # 3) If using ccm local: slugs, make sure you have LOCAL_GIT_REPO defined in your env. This is the path to your git repo.
 # 4) Run the tests!
 #      To run all, use 'nosetests -v upgrade_tests/'. To run specific tests, use 'nosetests -vs --collect-only' to preview the test names, then run nosetests using the desired test name.
+custom_indev_3_x = VersionMeta(name='custom_indev_3_x', family='3.x', variant='indev', version='github:ifesdjeen/12251-trunk', min_proto_v=3, max_proto_v=4, java_versions=(8,))
+custom_current_3_x = VersionMeta(name='custom_current_3_x', family='3.x', variant='current', version='git:trunk', min_proto_v=3, max_proto_v=4, java_versions=(8,))
+
 custom_1 = VersionMeta(name='custom_branch_1', family='2.1.x', variant='indev', version='local:some_branch', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_2 = VersionMeta(name='custom_branch_2', family='2.2.x', variant='indev', version='git:trunk', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_3 = VersionMeta(name='custom_branch_3', family='3.0.x', variant='indev', version='git:cassandra-3.5', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_4 = VersionMeta(name='custom_branch_4', family='3.x', variant='indev', version='git:cassandra-3.6', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 OVERRIDE_MANIFEST = {
+    custom_current_3_x: [current_indev_3_x]
     # EXAMPLE:
     # custom_1: [custom_2, custom_3],  # creates a test of custom_1 -> custom_2, and another test from custom_1 -> custom_3
     # custom_3: [custom_4]             # creates a test of custom_3 -> custom_4
